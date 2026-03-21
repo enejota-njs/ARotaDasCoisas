@@ -1,28 +1,82 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
+	"sync"
+	"time"
 )
 
-func handler(conn net.Conn) {
-	defer conn.Close()
-
-
+type Sensor struct {
+	Temperature float64 `json:"temperature"`
+	Luminosity  float64 `json:"luminosity"`
+	Humidity    float64 `json:"humidity"`
 }
 
-func connectionSensor(listenerSensor net.Listen) {
+var (
+	sensors Sensor
+	mu      sync.Mutex
+)
+
+func listenSensor() {
+	bufferSensors := make([]byte, 1024)
+
+	connSensor, err := net.ListenPacket("udp", "localhost:5050")
+	if err != nil {
+		return
+	}
+	defer connSensor.Close()
+
+	fmt.Println("Sensores conectados.")
+
 	for {
-		connSensor, err := listenerSensor.Accept()
+		n, _, err := connSensor.ReadFrom(bufferSensors)
 		if err != nil {
 			continue
 		}
 
-		go handle
+		var received Sensor
+		err = json.Unmarshal(bufferSensors[:n], &received)
+		if err != nil {
+			continue
+		}
+
+		mu.Lock()
+		sensors = received
+		mu.Unlock()
 	}
 }
 
-func connectionClient(listener *net.Listen) {
+func handleClient(conn net.Conn) {
+	defer conn.Close()
+
+	for {
+		mu.Lock()
+		current := sensors
+		mu.Unlock()
+
+		values := fmt.Sprintf(
+			"Temperatura: %.2f | Lumimosidade: %.2f | Umidade: %.2f\n",
+			current.Temperature,
+			current.Luminosity,
+			current.Humidity,
+		)
+
+		conn.Write([]byte(values))
+
+		time.Sleep(1 * time.Second)
+	}
+
+}
+
+func listenClient() {
+	listenerClient, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		panic(err)
+	}
+	defer listenerClient.Close()
+
 	for {
 		connClient, err := listenerClient.Accept()
 		if err != nil {
@@ -30,30 +84,15 @@ func connectionClient(listener *net.Listen) {
 		}
 
 		fmt.Println("Cliente conectado.")
-		go HandleConnection(connClient, sensors)
+		go handleClient(connClient)
 	}
 }
 
 func main() {
 	fmt.Println("Servidor inicializado.")
 
-	connSensor, err := net.ListenPacket("udp", "localhost:5050")
-	if err != nil {
-		panic(err)
-	}
-	defer connSensor.Close()
+	go listenSensor()
+	go listenClient()
 
-	for {
-		sensors := connSensor.ReadFrom()
-	}
-
-	listenerClient, err := net.Listen("tcp", ":5555")
-	if err != nil {
-		panic(err)
-	}
-	defer listenerClient.Close()
-
-	go connectionClient()
-
-	
+	select {}
 }

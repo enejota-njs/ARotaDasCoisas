@@ -1,4 +1,4 @@
-package client
+package main
 
 import (
 	"bufio"
@@ -7,23 +7,23 @@ import (
 )
 
 func main() {
-	conn, err := net.Dial("tcp", ":5555")
-
+	conn, err := net.Dial("tcp", "localhost:8080")
 	if err != nil {
-		panic(err)
+		return
 	}
 	defer conn.Close()
 
-	fmt.Println("Conectado.")
+	fmt.Println("Conectado ao servidor.")
 
 	reader := bufio.NewReader(conn)
 
 	for {
-		message, err := reader.ReadString('\n')
+		values, err := reader.ReadString('\n')
 		if err != nil {
+			fmt.Println("Conexão encerrada:", err)
 			return
 		}
 
-		fmt.Print(message)
+		fmt.Println(values)
 	}
 }

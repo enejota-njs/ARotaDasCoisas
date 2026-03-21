@@ -1,7 +1,8 @@
-package sensor
+package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"net"
 	"time"
@@ -16,13 +17,16 @@ type Sensor struct {
 func main() {
 	conn, err := net.Dial("udp", "localhost:5050")
 	if err != nil {
-		panic(err)
+		fmt.Println("Erro ao conectar.")
+		return
 	}
 	defer conn.Close()
 
-	for {
-		rand.Seed(time.Now().UnixNano())
+	fmt.Println("Sensores inicializados.")
 
+	rand.Seed(time.Now().UnixNano())
+
+	for {
 		data := Sensor{
 			Temperature: rand.Float64(),
 			Luminosity:  rand.Float64(),
