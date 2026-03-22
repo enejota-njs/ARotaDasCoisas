@@ -15,27 +15,35 @@ type Sensor struct {
 }
 
 func main() {
-	conn, err := net.Dial("udp", "localhost:5050")
-	if err != nil {
-		fmt.Println("Erro ao conectar.")
-		return
-	}
-	defer conn.Close()
-
 	fmt.Println("Sensores inicializados.")
 
 	rand.Seed(time.Now().UnixNano())
 
 	for {
-		data := Sensor{
-			Temperature: rand.Float64(),
-			Luminosity:  rand.Float64(),
-			Humidity:    rand.Float64(),
+		conn, err := net.Dial("udp", "127.0.0.1:7070")
+		if err != nil {
+			fmt.Println("Erro ao conectar: ", err)
+			time.Sleep(1 * time.Second)
+			continue
 		}
 
-		values, _ := json.Marshal(data)
+		for {
+			data := Sensor{
+				Temperature: rand.Float64(),
+				Luminosity:  rand.Float64(),
+				Humidity:    rand.Float64(),
+			}
 
-		conn.Write(values)
-		time.Sleep(1 * time.Second)
+			values, _ := json.Marshal(data)
+
+			_, err := conn.Write(values)
+			if err != nil {
+				fmt.Println("Erro no envio:", err)
+				conn.Close()
+				break
+			}
+
+			time.Sleep(1 * time.Second)
+		}
 	}
 }

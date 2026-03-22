@@ -22,23 +22,24 @@ var (
 func listenSensor() {
 	bufferSensors := make([]byte, 1024)
 
-	connSensor, err := net.ListenPacket("udp", "localhost:5050")
+	connSensor, err := net.ListenPacket("udp", "127.0.0.1:7070")
 	if err != nil {
+		fmt.Println("Erro ao iniciar servidor UDP:", err)
 		return
 	}
 	defer connSensor.Close()
 
-	fmt.Println("Sensores conectados.")
-
 	for {
 		n, _, err := connSensor.ReadFrom(bufferSensors)
 		if err != nil {
+			fmt.Println("Erro no ReadFrom:", err)
 			continue
 		}
 
 		var received Sensor
 		err = json.Unmarshal(bufferSensors[:n], &received)
 		if err != nil {
+			fmt.Println("Erro no Unmarshal:", err)
 			continue
 		}
 
@@ -63,7 +64,10 @@ func handleClient(conn net.Conn) {
 			current.Humidity,
 		)
 
-		conn.Write([]byte(values))
+		_, err := conn.Write([]byte(values))
+		if err != nil {
+			fmt.Println("Erro no envio:", err)
+		}
 
 		time.Sleep(1 * time.Second)
 	}
@@ -80,6 +84,7 @@ func listenClient() {
 	for {
 		connClient, err := listenerClient.Accept()
 		if err != nil {
+			fmt.Println("Erro no Accept:", err)
 			continue
 		}
 

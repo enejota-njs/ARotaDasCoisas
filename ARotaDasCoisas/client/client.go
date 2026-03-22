@@ -9,6 +9,7 @@ import (
 func main() {
 	conn, err := net.Dial("tcp", "localhost:8080")
 	if err != nil {
+		fmt.Println("Erro ao conectar: ", err)
 		return
 	}
 	defer conn.Close()
