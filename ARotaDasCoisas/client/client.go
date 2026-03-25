@@ -25,11 +25,6 @@ func main() {
 			return
 		}
 
-		if values == "------\n" {
-			fmt.Print("\033[H\033[2J")
-			continue
-		}
-
 		fmt.Print(values)
 	}
 }

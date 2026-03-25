@@ -93,7 +93,6 @@ func handleClient(conn net.Conn) {
 			conn.Write([]byte(values))
 		}
 
-		conn.Write([]byte("------\n"))
 		time.Sleep(1 * time.Second)
 	}
 }
