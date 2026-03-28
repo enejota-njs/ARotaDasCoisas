@@ -22,7 +22,7 @@ func main() {
 	reader := bufio.NewReader(conn)
 
 	for {
-		fmt.Println("|----------- MENU -----------|")
+		fmt.Println("\n|----------- MENU -----------|")
 		fmt.Println("| [ 1 ] - Listar sensores    |")
 		fmt.Println("| [ 2 ] - Verificar sensores |")
 		fmt.Println("| [ 3 ] - Selecionar sensor  |")
@@ -33,9 +33,32 @@ func main() {
 		option, _ := input.ReadString('\n')
 		option = strings.TrimSpace(option)
 
-		if option == "1" || option == "2" || option == "3" {
-			fmt.Fprintf(conn, "%s\n", option)
-		} else {
+		fmt.Println("")
+
+		switch option {
+		case "1":
+			fmt.Fprint(conn, "1|\n")
+		case "2":
+			fmt.Fprint(conn, "2|\n")
+			go func() {
+				for {
+					fmt.Print("\nAperte [ S ] para voltar: ")
+
+					optionS, _ := input.ReadString('\n')
+					optionS = strings.TrimSpace(optionS)
+
+					if optionS == "s" || optionS == "S" {
+						return
+					}
+				}
+			}()
+		case "3":
+			fmt.Print("\nDigite o ID do sensor: ")
+
+			id, _ := input.ReadString('\n')
+
+			fmt.Fprint(conn, "3|"+id+"\n")
+		default:
 			fmt.Println("Opção inválida.")
 			continue
 		}

@@ -33,7 +33,7 @@ func step(value int) int {
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	id := fmt.Sprintf("Temperature (%d)", time.Now().UnixNano())
+	id := fmt.Sprintf("Temperature (%d)", time.Now().Unix())
 	temp := rand.Intn(61) - 10
 
 	fmt.Printf("Sensor de temperatura %s inicializado.\n", id)

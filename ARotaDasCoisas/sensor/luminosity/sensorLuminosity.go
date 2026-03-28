@@ -33,7 +33,7 @@ func step(value int) int {
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	id := fmt.Sprintf("Luminosity (%d)", time.Now().UnixNano())
+	id := fmt.Sprintf("Luminosity (%d)", time.Now().Unix())
 	lumi := 300 + rand.Intn(101) // 300–400
 
 	fmt.Printf("Sensor de luminosidade %s inicializado.\n", id)
