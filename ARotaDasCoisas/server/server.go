@@ -10,29 +10,35 @@ import (
 	"time"
 )
 
+type ResponseSensor struct {
+	Status string `json:"status"`
+	Data   Sensor `json:"data"`
+	Error  string `json:"error"`
+}
+
 type Sensor struct {
 	ID          string `json:"id"`
-	Temperature *int   `json:"temperature"`
-	Luminosity  *int   `json:"luminosity"`
-	Humidity    *int   `json:"humidity"`
+	Temperature *int   `json:"temperature,omitempty"`
+	Luminosity  *int   `json:"luminosity,omitempty"`
+	Humidity    *int   `json:"humidity,omitempty"`
 }
 
 type SensorHistory struct {
 	ID           string `json:"id"`
-	Temperatures []int  `json:"temperatures"`
-	Luminosities []int  `json:"luminosities"`
-	Humidities   []int  `json:"humidities"`
+	Temperatures []int  `json:"temperatures,omitempty"`
+	Luminosities []int  `json:"luminosities,omitempty"`
+	Humidities   []int  `json:"humidities,omitempty"`
 }
 
 type Request struct {
-	ID     int    `json:"id"`
+	ID     string `json:"id"`
 	Action string `json:"action"`
 }
 
 type Response struct {
 	Status string      `json:"status"`
-	Data   interface{} `json:"data,omitempty"`
-	Error  string      `json:"error,omitempty"`
+	Data   interface{} `json:"data"`
+	Error  string      `json:"error"`
 }
 
 var (
@@ -89,16 +95,17 @@ func saveFile() {
 		copySensors := maps.Clone(sensors)
 		mu.Unlock()
 
-		file, err := os.Create("readings.json")
+		file, err := os.Create("../dataBase.json")
 		if err != nil {
 			fmt.Println("\nErro ao criar arquivo JSON.")
 			return
 		}
-		defer file.Close()
 
 		encoder := json.NewEncoder(file)
 		encoder.SetIndent("", "  ")
 		encoder.Encode(copySensors)
+
+		file.Close()
 
 		time.Sleep(5 * time.Second)
 	}
@@ -109,23 +116,36 @@ func listSensors(conn net.Conn) {
 	copySensors := maps.Clone(sensors)
 	mu.Unlock()
 
-	var ids []string
-
 	for id, s := range copySensors {
-		if len(s.Temperatures) > 0 ||
-			len(s.Luminosities) > 0 ||
-			len(s.Humidities) > 0 {
+		if len(s.Temperatures) == 0 &&
+			len(s.Luminosities) == 0 &&
+			len(s.Humidities) == 0 {
+			continue
+		}
 
-			ids = append(ids, id)
+		sensor := Sensor{
+			ID: id,
+		}
+
+		responseSensor := ResponseSensor{
+			Status: "success",
+			Data:   sensor,
+		}
+
+		if err := json.NewEncoder(conn).Encode(responseSensor); err != nil {
+			fmt.Println("\nErro ao enviar resposta para o cliente: ", err)
+			return
 		}
 	}
 
-	response := Response{
-		Status: "sucess",
-		Data:   ids,
+	responseSensor := ResponseSensor{
+		Status: "end",
 	}
 
-	json.NewEncoder(conn).Encode(response)
+	if err := json.NewEncoder(conn).Encode(responseSensor); err != nil {
+		fmt.Println("\nErro ao finalizar resposta do cliente: ", err)
+		return
+	}
 }
 
 func verifySensors(conn net.Conn) {
@@ -134,11 +154,10 @@ func verifySensors(conn net.Conn) {
 		copySensors := maps.Clone(sensors)
 		mu.Unlock()
 
-		var result []Sensor
-
 		for id, s := range copySensors {
-			var sensor Sensor
-			sensor.ID = id
+			sensor := Sensor{
+				ID: id,
+			}
 
 			if len(s.Temperatures) > 0 {
 				value := s.Temperatures[len(s.Temperatures)-1]
@@ -153,15 +172,25 @@ func verifySensors(conn net.Conn) {
 				sensor.Humidity = &value
 			}
 
-			result = append(result, sensor)
+			responseSensor := ResponseSensor{
+				Status: "success",
+				Data:   sensor,
+			}
+
+			if err := json.NewEncoder(conn).Encode(responseSensor); err != nil {
+				fmt.Println("\nErro ao enviar resposta para o cliente: ", err)
+				return
+			}
 		}
 
-		response := Response{
-			Status: "success",
-			Data:   result,
+		responseSensor := ResponseSensor{
+			Status: "endOfRound",
 		}
 
-		json.NewEncoder(conn).Encode(response)
+		if err := json.NewEncoder(conn).Encode(responseSensor); err != nil {
+			fmt.Println("\nErro ao finalizar resposta do cliente: ", err)
+			return
+		}
 
 		time.Sleep(1 * time.Second)
 	}
@@ -172,7 +201,7 @@ func selectSensor(conn net.Conn, request Request) {
 	copySensors := maps.Clone(sensors)
 	mu.Unlock()
 
-	id := fmt.Sprintf("%d", request.ID)
+	id := fmt.Sprintf("%s", request.ID)
 
 	sensor, ok := copySensors[id]
 	if !ok {

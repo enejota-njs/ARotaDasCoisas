@@ -36,7 +36,7 @@ func main() {
 	id := fmt.Sprintf("Luminosity (%d)", time.Now().Unix())
 	lumi := 300 + rand.Intn(101) // 300–400
 
-	fmt.Printf("Sensor de luminosidade %s inicializado.\n", id)
+	fmt.Printf("\nSensor de luminosidade %s inicializado.\n", id)
 
 	for {
 		conn, err := net.Dial("udp", "127.0.0.1:7000")

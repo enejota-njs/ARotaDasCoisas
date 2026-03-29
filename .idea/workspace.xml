@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="ALL" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="1f2d9508-2ea3-43ca-b996-4434772a8a88" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/ARotaDasCoisas/client/client.go" beforeDir="false" afterPath="$PROJECT_DIR$/ARotaDasCoisas/client/client.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ARotaDasCoisas/sensor/humidity/sensorHumidity.go" beforeDir="false" afterPath="$PROJECT_DIR$/ARotaDasCoisas/sensor/humidity/sensorHumidity.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ARotaDasCoisas/sensor/luminosity/sensorLuminosity.go" beforeDir="false" afterPath="$PROJECT_DIR$/ARotaDasCoisas/sensor/luminosity/sensorLuminosity.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ARotaDasCoisas/sensor/temperature/sensorTemperature.go" beforeDir="false" afterPath="$PROJECT_DIR$/ARotaDasCoisas/sensor/temperature/sensorTemperature.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ARotaDasCoisas/server/server.go" beforeDir="false" afterPath="$PROJECT_DIR$/ARotaDasCoisas/server/server.go" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="GOROOT" url="file://$PROJECT_DIR$/../../../../../../../../../Program Files/Go" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 0,
+  "fromUser": false
+}]]></component>
+  <component name="ProjectId" id="3BaibNOCyvYkTvUH739r50mbgNx" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.go.analysis.ui.options.defaults": "true",
+    "RunOnceActivity.go.formatter.settings.were.checked": "true",
+    "RunOnceActivity.go.modules.go.list.on.any.changes.was.set": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "main",
+    "go.sdk.automatically.set": "true",
+    "junie.onboarding.icon.badge.shown": "true",
+    "last_opened_file_path": "C:/Users/enejo/OneDrive/Documentos/Docs/UEFS/Materias/5° Semestre 2026.1/PBL 1 - A Rota das Coisas",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "to.speed.mode.migration.done": "true"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-gosdk-72a9cf600ed8-dfa3e7267ae0-org.jetbrains.plugins.go.sharedIndexes.bundled-GO-253.32098.60" />
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-GO-253.32098.60" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="1f2d9508-2ea3-43ca-b996-4434772a8a88" name="Changes" comment="" />
+      <created>1774733653667</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1774733653667</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

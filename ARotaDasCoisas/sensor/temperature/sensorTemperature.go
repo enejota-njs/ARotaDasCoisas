@@ -36,7 +36,7 @@ func main() {
 	id := fmt.Sprintf("Temperature (%d)", time.Now().Unix())
 	temp := rand.Intn(61) - 10
 
-	fmt.Printf("Sensor de temperatura %s inicializado.\n", id)
+	fmt.Printf("\nSensor de temperatura %s inicializado.\n", id)
 
 	for {
 		conn, err := net.Dial("udp", "127.0.0.1:7000")

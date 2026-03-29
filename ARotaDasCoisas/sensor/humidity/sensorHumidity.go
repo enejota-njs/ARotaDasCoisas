@@ -36,7 +36,7 @@ func main() {
 	id := fmt.Sprintf("Humidity (%d)", time.Now().Unix())
 	humi := 40 + rand.Intn(11) // 40–50
 
-	fmt.Printf("Sensor de umidade %s inicializado.\n", id)
+	fmt.Printf("\nSensor de umidade %s inicializado.\n", id)
 
 	for {
 		conn, err := net.Dial("udp", "127.0.0.1:7000")
