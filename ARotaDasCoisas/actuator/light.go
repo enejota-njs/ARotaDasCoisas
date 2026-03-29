@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -26,7 +28,7 @@ func listenServer(conn net.Conn) {
 
 	for {
 		if err := decoder.Decode(&request); err != nil {
-			fmt.Println("\nErro na requisição do cliente: ", err)
+			fmt.Println("\nErro na requisição do servidor: ", err)
 			return
 		}
 
@@ -40,6 +42,11 @@ func listenServer(conn net.Conn) {
 }
 
 func main() {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("\nDigite o ID da lâmpada: ")
+	id, _ := reader.ReadString('\n')
+	id = strings.TrimSpace(id)
+
 	conn, err := net.Dial("tcp", "localhost:9000")
 	if err != nil {
 		fmt.Println("Erro ao conectar no servidor: ", err)
@@ -49,12 +56,9 @@ func main() {
 
 	fmt.Println("\nConectado ao servidor.")
 
-	rand.Seed(time.Now().UnixNano())
-	id := fmt.Sprintf("Light (%d)", time.Now().Unix())
-
 	actuator := Actuator{
 		ID:   id,
-		Type: "light",
+		Type: "Light",
 	}
 
 	if err := json.NewEncoder(conn).Encode(actuator); err != nil {
@@ -63,18 +67,22 @@ func main() {
 	}
 
 	light.ID = id
-	light.Type = "light"
+	light.Type = "Light"
 
 	go listenServer(conn)
 
+	var on string
 	for {
 		fmt.Print("\033[H\033[2J")
 
-		on := "Desligado"
+		if !light.On {
+			on = "Desligado"
+		}
 		if light.On {
 			on = "Ligado"
 		}
 
-		fmt.Printf("%s = %s", id, on)
+		fmt.Printf("%s (%s) = %s", light.Type, light.ID, on)
+		time.Sleep(1 * time.Second)
 	}
 }

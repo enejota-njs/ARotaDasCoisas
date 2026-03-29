@@ -53,71 +53,6 @@ var (
 	muActuator sync.Mutex
 )
 
-func listenSensor() {
-	bufferSensors := make([]byte, 1024)
-
-	connSensor, err := net.ListenPacket("udp", "127.0.0.1:7000")
-	if err != nil {
-		fmt.Println("\nErro ao iniciar servidor UDP:", err)
-		return
-	}
-	defer connSensor.Close()
-
-	for {
-		n, _, err := connSensor.ReadFrom(bufferSensors)
-		if err != nil {
-			fmt.Println("\nErro ao se comunicar com sensor:", err)
-			continue
-		}
-
-		var received Sensor
-		err = json.Unmarshal(bufferSensors[:n], &received)
-		if err != nil {
-			fmt.Println("Erro ao descompactar sensor:", err)
-			continue
-		}
-
-		muSensor.Lock()
-		current := sensors[received.ID]
-
-		if received.Temperature != nil {
-			current.Temperatures = append(current.Temperatures, *received.Temperature)
-		}
-		if received.Luminosity != nil {
-			current.Luminosities = append(current.Luminosities, *received.Luminosity)
-		}
-		if received.Humidity != nil {
-			current.Humidities = append(current.Humidities, *received.Humidity)
-		}
-
-		current.ID = received.ID
-		sensors[received.ID] = current
-		muSensor.Unlock()
-	}
-}
-
-func saveFile() {
-	for {
-		muSensor.Lock()
-		copySensors := maps.Clone(sensors)
-		muSensor.Unlock()
-
-		file, err := os.Create("../dataBase.json")
-		if err != nil {
-			fmt.Println("\nErro ao criar arquivo JSON.")
-			return
-		}
-
-		encoder := json.NewEncoder(file)
-		encoder.SetIndent("", "  ")
-		encoder.Encode(copySensors)
-
-		file.Close()
-
-		time.Sleep(5 * time.Second)
-	}
-}
-
 func listSensors(conn net.Conn) {
 	muSensor.Lock()
 	copySensors := maps.Clone(sensors)
@@ -251,6 +186,67 @@ func selectSensor(conn net.Conn, request Request) {
 	}
 }
 
+func sendActuatorCommand(id, command string) {
+	muActuator.Lock()
+	actuator, ok := actuators[id]
+	muActuator.Unlock()
+
+	if !ok {
+		fmt.Println("\nAtuador não encontrado")
+		return
+	}
+
+	request := Request{
+		ID:     id,
+		Action: command,
+	}
+
+	if err := json.NewEncoder(actuator.Conn).Encode(request); err != nil {
+		fmt.Println("\nErro ao enviar comando para atuador: ", err)
+		return
+	}
+}
+
+func actuatorControl() {
+	for {
+		muSensor.Lock()
+		copySensors := maps.Clone(sensors)
+		muSensor.Unlock()
+
+		for _, s := range copySensors {
+			if len(s.Luminosities) > 0 {
+				luminosity := s.Luminosities[len(s.Luminosities)-1]
+
+				if luminosity >= 50 {
+					sendActuatorCommand(s.ID, "off")
+				} else {
+					sendActuatorCommand(s.ID, "on")
+				}
+			}
+
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func handleActuator(conn net.Conn) {
+	var actuator Actuator
+	if err := json.NewDecoder(conn).Decode(&actuator); err != nil {
+		fmt.Println("\nErro ao registrar atuador no servidor: ", err)
+		conn.Close()
+		return
+	}
+
+	muActuator.Lock()
+	actuators[actuator.ID] = ActuatorConn{
+		Actuator: actuator,
+		Conn:     conn,
+	}
+	muActuator.Unlock()
+
+	fmt.Printf("\nAtuador registrado: %s (%s)", actuator.Type, actuator.ID)
+}
+
 func handleClient(conn net.Conn) {
 	defer conn.Close()
 
@@ -274,62 +270,46 @@ func handleClient(conn net.Conn) {
 	}
 }
 
-func control() {
+func listenSensor() {
+	bufferSensors := make([]byte, 1024)
+
+	connSensor, err := net.ListenPacket("udp", "127.0.0.1:7000")
+	if err != nil {
+		fmt.Println("\nErro ao iniciar servidor UDP:", err)
+		return
+	}
+	defer connSensor.Close()
+
 	for {
-		muSensor.Lock()
-		copySensors := maps.Clone(sensors)
-		muSensor.Unlock()
-
-		for _, s := range copySensors {
-			if len(s.Luminosities) > 0 {
-				luminosity := s.Luminosities[len(s.Luminosities)-1]
-
-				if luminosity >= 50 {
-					sendActuatorCommand("light", "off")
-				} else {
-					sendActuatorCommand("light", "on")
-				}
-			}
+		n, _, err := connSensor.ReadFrom(bufferSensors)
+		if err != nil {
+			fmt.Println("\nErro ao se comunicar com sensor:", err)
+			continue
 		}
-	}
-}
 
-func handleActuator(conn net.Conn) {
-	defer conn.Close()
+		var received Sensor
+		err = json.Unmarshal(bufferSensors[:n], &received)
+		if err != nil {
+			fmt.Println("Erro ao descompactar sensor:", err)
+			continue
+		}
 
-	var actuator Actuator
-	if err := json.NewDecoder(conn).Decode(&actuator); err != nil {
-		fmt.Println("\nErro ao registrar atuador no servidor: ", err)
-		return
-	}
+		muSensor.Lock()
+		current := sensors[received.ID]
 
-	muActuator.Lock()
-	actuators[actuator.ID] = ActuatorConn{
-		Actuator: actuator,
-		Conn:     conn,
-	}
-	muActuator.Unlock()
+		if received.Temperature != nil {
+			current.Temperatures = append(current.Temperatures, *received.Temperature)
+		}
+		if received.Luminosity != nil {
+			current.Luminosities = append(current.Luminosities, *received.Luminosity)
+		}
+		if received.Humidity != nil {
+			current.Humidities = append(current.Humidities, *received.Humidity)
+		}
 
-	fmt.Printf("\nAtuador registrado: %s (%s)")
-}
-
-func sendActuatorCommand(id, command string) {
-	muActuator.Lock()
-	actuator, ok := actuators[id]
-	muActuator.Unlock()
-
-	if !ok {
-		fmt.Println("\nAtuador não encontrado")
-		return
-	}
-
-	request := Request{
-		ID:     id,
-		Action: command,
-	}
-
-	if err := json.NewEncoder(actuator.Conn).Encode(request); err != nil {
-		fmt.Println("\nErro ao enviar comando para atuador:", err)
+		current.ID = received.ID
+		sensors[received.ID] = current
+		muSensor.Unlock()
 	}
 }
 
@@ -372,12 +352,34 @@ func listenClient() {
 	}
 }
 
+func saveFile() {
+	for {
+		muSensor.Lock()
+		copySensors := maps.Clone(sensors)
+		muSensor.Unlock()
+
+		file, err := os.Create("../dataBase.json")
+		if err != nil {
+			fmt.Println("\nErro ao criar arquivo JSON.")
+			return
+		}
+
+		encoder := json.NewEncoder(file)
+		encoder.SetIndent("", "  ")
+		encoder.Encode(copySensors)
+
+		file.Close()
+
+		time.Sleep(5 * time.Second)
+	}
+}
+
 func main() {
 	fmt.Println("\nServidor inicializado.")
 
 	go listenSensor()
 	go saveFile()
 	go listenActuator()
-	go control()
+	go actuatorControl()
 	listenClient()
 }
