@@ -34,7 +34,7 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	id := fmt.Sprintf("Luminosity (%d)", time.Now().Unix())
-	lumi := 300 + rand.Intn(101) // 300–400
+	lumi := rand.Intn(101) // 300–400
 
 	fmt.Printf("\nSensor de luminosidade %s inicializado.\n", id)
 
@@ -62,7 +62,7 @@ func main() {
 				break
 			}
 
-			time.Sleep(1 * time.Second)
+			time.Sleep(1 * time.Millisecond)
 		}
 	}
 }

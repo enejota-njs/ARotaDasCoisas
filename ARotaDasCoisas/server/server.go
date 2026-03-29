@@ -35,9 +35,22 @@ type Request struct {
 	Action string `json:"action"`
 }
 
+type Actuator struct {
+	ID   string `json:"id"`
+	On   bool   `json:"on"`
+	Type string `json:"type"`
+}
+
+type ActuatorConn struct {
+	Actuator Actuator `json:"actuator"`
+	Conn     net.Conn `json:"conn"`
+}
+
 var (
-	sensors = make(map[string]SensorHistory)
-	mu      sync.Mutex
+	sensors    = make(map[string]SensorHistory)
+	actuators  = make(map[string]ActuatorConn)
+	muSensor   sync.Mutex
+	muActuator sync.Mutex
 )
 
 func listenSensor() {
@@ -64,7 +77,7 @@ func listenSensor() {
 			continue
 		}
 
-		mu.Lock()
+		muSensor.Lock()
 		current := sensors[received.ID]
 
 		if received.Temperature != nil {
@@ -79,15 +92,15 @@ func listenSensor() {
 
 		current.ID = received.ID
 		sensors[received.ID] = current
-		mu.Unlock()
+		muSensor.Unlock()
 	}
 }
 
 func saveFile() {
 	for {
-		mu.Lock()
+		muSensor.Lock()
 		copySensors := maps.Clone(sensors)
-		mu.Unlock()
+		muSensor.Unlock()
 
 		file, err := os.Create("../dataBase.json")
 		if err != nil {
@@ -106,9 +119,9 @@ func saveFile() {
 }
 
 func listSensors(conn net.Conn) {
-	mu.Lock()
+	muSensor.Lock()
 	copySensors := maps.Clone(sensors)
-	mu.Unlock()
+	muSensor.Unlock()
 
 	for id, s := range copySensors {
 		if len(s.Temperatures) == 0 &&
@@ -144,9 +157,9 @@ func listSensors(conn net.Conn) {
 
 func verifySensors(conn net.Conn) {
 	for {
-		mu.Lock()
+		muSensor.Lock()
 		copySensors := maps.Clone(sensors)
-		mu.Unlock()
+		muSensor.Unlock()
 
 		for id, s := range copySensors {
 			sensor := Sensor{
@@ -192,9 +205,9 @@ func verifySensors(conn net.Conn) {
 
 func selectSensor(conn net.Conn, request Request) {
 	for {
-		mu.Lock()
+		muSensor.Lock()
 		copySensors := maps.Clone(sensors)
-		mu.Unlock()
+		muSensor.Unlock()
 
 		current, ok := copySensors[request.ID]
 		if !ok {
@@ -261,6 +274,85 @@ func handleClient(conn net.Conn) {
 	}
 }
 
+func control() {
+	for {
+		muSensor.Lock()
+		copySensors := maps.Clone(sensors)
+		muSensor.Unlock()
+
+		for _, s := range copySensors {
+			if len(s.Luminosities) > 0 {
+				luminosity := s.Luminosities[len(s.Luminosities)-1]
+
+				if luminosity >= 50 {
+					sendActuatorCommand("light", "off")
+				} else {
+					sendActuatorCommand("light", "on")
+				}
+			}
+		}
+	}
+}
+
+func handleActuator(conn net.Conn) {
+	defer conn.Close()
+
+	var actuator Actuator
+	if err := json.NewDecoder(conn).Decode(&actuator); err != nil {
+		fmt.Println("\nErro ao registrar atuador no servidor: ", err)
+		return
+	}
+
+	muActuator.Lock()
+	actuators[actuator.ID] = ActuatorConn{
+		Actuator: actuator,
+		Conn:     conn,
+	}
+	muActuator.Unlock()
+
+	fmt.Printf("\nAtuador registrado: %s (%s)")
+}
+
+func sendActuatorCommand(id, command string) {
+	muActuator.Lock()
+	actuator, ok := actuators[id]
+	muActuator.Unlock()
+
+	if !ok {
+		fmt.Println("\nAtuador não encontrado")
+		return
+	}
+
+	request := Request{
+		ID:     id,
+		Action: command,
+	}
+
+	if err := json.NewEncoder(actuator.Conn).Encode(request); err != nil {
+		fmt.Println("\nErro ao enviar comando para atuador:", err)
+	}
+}
+
+func listenActuator() {
+	listenerActuator, err := net.Listen("tcp", ":9000")
+	if err != nil {
+		panic(err)
+	}
+	defer listenerActuator.Close()
+
+	for {
+		connActuator, err := listenerActuator.Accept()
+		if err != nil {
+			fmt.Println("\nErro na conexão com atuador: ", err)
+			continue
+		}
+
+		fmt.Println("\nAtuador conectado.")
+
+		go handleActuator(connActuator)
+	}
+}
+
 func listenClient() {
 	listenerClient, err := net.Listen("tcp", ":8000")
 	if err != nil {
@@ -271,7 +363,7 @@ func listenClient() {
 	for {
 		connClient, err := listenerClient.Accept()
 		if err != nil {
-			fmt.Println("\nErro na conexão com o cliente:", err)
+			fmt.Println("\nErro na conexão com o cliente: ", err)
 			continue
 		}
 
@@ -285,5 +377,7 @@ func main() {
 
 	go listenSensor()
 	go saveFile()
+	go listenActuator()
+	go control()
 	listenClient()
 }

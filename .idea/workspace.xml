@@ -6,15 +6,23 @@
   <component name="ChangeListManager">
     <list default="true" id="1f2d9508-2ea3-43ca-b996-4434772a8a88" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ARotaDasCoisas/client/client.go" beforeDir="false" afterPath="$PROJECT_DIR$/ARotaDasCoisas/client/client.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ARotaDasCoisas/dataBase.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ARotaDasCoisas/dataBase.json" beforeDir="false" afterPath="$PROJECT_DIR$/ARotaDasCoisas/dataBase.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ARotaDasCoisas/sensor/humidity/sensorHumidity.go" beforeDir="false" afterPath="$PROJECT_DIR$/ARotaDasCoisas/sensor/humidity/sensorHumidity.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ARotaDasCoisas/sensor/luminosity/sensorLuminosity.go" beforeDir="false" afterPath="$PROJECT_DIR$/ARotaDasCoisas/sensor/luminosity/sensorLuminosity.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ARotaDasCoisas/sensor/temperature/sensorTemperature.go" beforeDir="false" afterPath="$PROJECT_DIR$/ARotaDasCoisas/sensor/temperature/sensorTemperature.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ARotaDasCoisas/server/server.go" beforeDir="false" afterPath="$PROJECT_DIR$/ARotaDasCoisas/server/server.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Go File" />
+      </list>
+    </option>
   </component>
   <component name="GOROOT" url="file://$PROJECT_DIR$/../../../../../../../../../Program Files/Go" />
   <component name="Git.Settings">
@@ -35,6 +43,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "DefaultGoTemplateProperty": "Go File",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
@@ -51,6 +60,7 @@
     "node.js.detected.package.eslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "editor.preferences.completion",
     "to.speed.mode.migration.done": "true"
   }
 }]]></component>
