@@ -16,8 +16,8 @@ type Request struct {
 }
 type Actuator struct {
 	ID   string `json:"id"`
-	On   bool   `json:"on"`
 	Type string `json:"type"`
+	On   bool   `json:"on"`
 }
 
 var light Actuator
@@ -47,7 +47,7 @@ func main() {
 	id, _ := reader.ReadString('\n')
 	id = strings.TrimSpace(id)
 
-	conn, err := net.Dial("tcp", "localhost:9000")
+	conn, err := net.Dial("tcp", "127.0.0.1:9000")
 	if err != nil {
 		fmt.Println("Erro ao conectar no servidor: ", err)
 		return

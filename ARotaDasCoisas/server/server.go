@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"maps"
 	"net"
-	"os"
 	"sync"
 	"time"
 )
@@ -28,32 +27,28 @@ type Request struct {
 }
 
 type Actuator struct {
-	ID   string `json:"id"`
-	On   bool   `json:"on"`
-	Type string `json:"type"`
-}
-
-type ActuatorConn struct {
-	Actuator Actuator `json:"actuator"`
-	Conn     net.Conn `json:"conn"`
+	Conn net.Conn `json:"conn"`
+	ID   string   `json:"id"`
+	Type string   `json:"type"`
+	On   bool     `json:"on"`
 }
 
 var (
 	sensors    = make(map[string]Sensor)
-	actuators  = make(map[string]ActuatorConn)
+	actuators  = make(map[string]Actuator)
 	muSensor   sync.Mutex
 	muActuator sync.Mutex
 )
 
-func receiveRequest(conn net.Conn, request Request) error {
-	decoder := json.NewDecoder(conn)
+// == SERVER
 
-	if err := decoder.Decode(&request); err != nil {
-		fmt.Println("\nErro na requisição do cliente: ", err)
+func receiveRequest(decoder *json.Decoder, request *Request) error {
+	if err := decoder.Decode(request); err != nil {
+		fmt.Println("\nErro na requisição: ", err)
 		return err
 	}
 	return nil
-}
+} // Finalizada
 
 func sendResponse(conn net.Conn, response Response) error {
 	encoder := json.NewEncoder(conn)
@@ -63,26 +58,41 @@ func sendResponse(conn net.Conn, response Response) error {
 		return err
 	}
 	return nil
-}
+} // Finalizada
 
-func checkList(conn net.Conn) bool {
+func sendRequest(conn net.Conn, request Request) error {
+	encoder := json.NewEncoder(conn)
+
+	if err := encoder.Encode(request); err != nil {
+		fmt.Println("\nErro ao enviar command: ", err)
+		return err
+	}
+	return nil
+} // Finalizada
+
+func checkListSensors() bool {
 	muSensor.Lock()
 	copySensors := maps.Clone(sensors)
 	muSensor.Unlock()
 
 	if len(copySensors) == 0 {
-		response := Response{
-			Status: "error",
-			Error:  "Lista de sensores vazia",
-		}
-
-		_ = sendResponse(conn, response)
 		return false
 	}
 	return true
-}
+} // Finalizada
 
-func listActuators(conn net.Conn) {
+func checkListActuators() bool {
+	muActuator.Lock()
+	copyActuators := maps.Clone(actuators)
+	muActuator.Unlock()
+
+	if len(copyActuators) == 0 {
+		return false
+	}
+	return true
+} // Finalizada
+
+/*func listActuators(conn net.Conn) {
 
 }
 
@@ -92,15 +102,155 @@ func verifyActuators(conn net.Conn) {
 
 func selectActuator() {
 
+}*/
+
+// == ACTUATOR
+
+func sendActuatorCommand(id, command string) {
+	muActuator.Lock()
+	actuator, ok := actuators[id]
+	muActuator.Unlock()
+
+	if !ok {
+		fmt.Println("\nAtuador não encontrado")
+		return
+	}
+
+	request := Request{
+		ID:     id,
+		Action: command,
+	}
+
+	if err := json.NewEncoder(actuator.Conn).Encode(request); err != nil {
+		fmt.Println("\nErro ao enviar comando para atuador: ", err)
+		return
+	}
 }
 
+func actuatorControl() {
+	for {
+		if !checkListActuators() || !checkListSensors() {
+			continue
+		}
+
+		muSensor.Lock()
+		copySensors := maps.Clone(sensors)
+		muSensor.Unlock()
+
+		for id, sensor := range copySensors {
+			switch sensor.Type {
+
+			case "Luminosidade":
+				if sensor.Value >= 50 {
+					sendActuatorCommand(id, "off")
+				} else {
+					sendActuatorCommand(id, "on")
+				}
+			case "Umidade":
+				if sensor.Value >= 70 {
+					sendActuatorCommand(id, "off")
+				} else {
+					sendActuatorCommand(id, "on")
+				}
+			case "Temperatura":
+				if sensor.Value >= 20 {
+					sendActuatorCommand(id, "on")
+				} else {
+					sendActuatorCommand(id, "off")
+				}
+			}
+
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func handleActuator(conn net.Conn) {
+	var actuator Actuator
+
+	if err := json.NewDecoder(conn).Decode(&actuator); err != nil {
+		fmt.Println("\nErro ao registrar atuador no servidor: ", err)
+		conn.Close()
+		return
+	}
+
+	muActuator.Lock()
+	actuators[actuator.ID] = Actuator{
+		Conn: conn,
+		ID:   actuator.ID,
+		Type: actuator.Type,
+		On:   actuator.On,
+	}
+	muActuator.Unlock()
+
+	fmt.Printf("\nAtuador registrado: %s (%s)", actuator.Type, actuator.ID)
+} // Finalizada
+
+func listenActuator() {
+	listenerActuator, err := net.Listen("tcp", "127.0.0.1:9000")
+	if err != nil {
+		panic(err)
+	}
+	defer listenerActuator.Close()
+
+	for {
+		connActuator, err := listenerActuator.Accept()
+		if err != nil {
+			fmt.Println("\nErro na conexão com atuador: ", err)
+			continue
+		}
+
+		fmt.Println("\nAtuador conectado.")
+
+		go handleActuator(connActuator)
+	}
+} // Finalizada
+
+// == SENSOR
+
+func listenSensor() {
+	bufferSensors := make([]byte, 1024)
+
+	connSensor, err := net.ListenPacket("udp", "127.0.0.1:7000")
+	if err != nil {
+		fmt.Println("\nErro ao iniciar servidor UDP:", err)
+		return
+	}
+	defer connSensor.Close()
+
+	for {
+		n, _, err := connSensor.ReadFrom(bufferSensors)
+		if err != nil {
+			fmt.Println("\nErro ao se comunicar com sensor: ", err)
+			continue
+		}
+
+		var received Sensor
+		err = json.Unmarshal(bufferSensors[:n], &received)
+		if err != nil {
+			fmt.Println("\nErro ao descompactar sensor: ", err)
+			continue
+		}
+
+		muSensor.Lock()
+		sensors[received.ID] = received
+		muSensor.Unlock()
+	}
+} // Finalizada
+
 func sensorClientRequest(conn net.Conn, request Request) {
-	if !checkList(conn) {
+	if !checkListSensors() {
+		response := Response{
+			Status: "error",
+			Error:  "Lista de sensores vazia",
+		}
+
+		_ = sendResponse(conn, response)
 		return
 	}
 
 	switch request.Action {
-	case "listSensor":
+	case "listSensors":
 		muSensor.Lock()
 		copySensors := maps.Clone(sensors)
 		muSensor.Unlock()
@@ -115,12 +265,13 @@ func sensorClientRequest(conn net.Conn, request Request) {
 				return
 			}
 		}
+
 		response := Response{
 			Status: "end",
 		}
 		_ = sendResponse(conn, response)
 
-	case "verifySensor", "selectSensor":
+	case "verifySensors", "selectSensor":
 		start := time.Now()
 
 		for {
@@ -136,7 +287,7 @@ func sensorClientRequest(conn net.Conn, request Request) {
 			copySensors := maps.Clone(sensors)
 			muSensor.Unlock()
 
-			if request.Action == "verifySensor" {
+			if request.Action == "verifySensors" {
 				for _, sensor := range copySensors {
 					response := Response{
 						Status: "success",
@@ -178,140 +329,30 @@ func sensorClientRequest(conn net.Conn, request Request) {
 			time.Sleep(1 * time.Second)
 		}
 	}
-}
+} // Finalizada
 
-func sendActuatorCommand(id, command string) {
-	muActuator.Lock()
-	actuator, ok := actuators[id]
-	muActuator.Unlock()
-
-	if !ok {
-		fmt.Println("\nAtuador não encontrado")
-		return
-	}
-
-	request := Request{
-		ID:     id,
-		Action: command,
-	}
-
-	if err := json.NewEncoder(actuator.Conn).Encode(request); err != nil {
-		fmt.Println("\nErro ao enviar comando para atuador: ", err)
-		return
-	}
-}
-
-func actuatorControl() {
-	for {
-		muSensor.Lock()
-		copySensors := maps.Clone(sensors)
-		muSensor.Unlock()
-
-		for _, s := range copySensors {
-			if len(s.Luminosities) > 0 {
-				luminosity := s.Luminosities[len(s.Luminosities)-1]
-
-				if luminosity >= 50 {
-					sendActuatorCommand(s.ID, "off")
-				} else {
-					sendActuatorCommand(s.ID, "on")
-				}
-			}
-
-		}
-		time.Sleep(1 * time.Second)
-	}
-}
-
-func handleActuator(conn net.Conn) {
-	var actuator Actuator
-	if err := json.NewDecoder(conn).Decode(&actuator); err != nil {
-		fmt.Println("\nErro ao registrar atuador no servidor: ", err)
-		conn.Close()
-		return
-	}
-
-	muActuator.Lock()
-	actuators[actuator.ID] = ActuatorConn{
-		Actuator: actuator,
-		Conn:     conn,
-	}
-	muActuator.Unlock()
-
-	fmt.Printf("\nAtuador registrado: %s (%s)", actuator.Type, actuator.ID)
-}
+// == CLIENT
 
 func handleClient(conn net.Conn) {
 	defer conn.Close()
+	decoder := json.NewDecoder(conn)
 
 	for {
 		var request Request
 
-		if receiveRequest(conn, request) != nil {
+		if receiveRequest(decoder, &request) != nil {
 			return
 		}
 
 		switch request.Action {
 		case "listSensors", "verifySensors", "selectSensor":
 			sensorClientRequest(conn, request)
-		case "listActuators":
-			listActuators(conn)
 		}
-	}
-}
-
-func listenSensor() {
-	bufferSensors := make([]byte, 1024)
-
-	connSensor, err := net.ListenPacket("udp", "127.0.0.1:7000")
-	if err != nil {
-		fmt.Println("\nErro ao iniciar servidor UDP:", err)
-		return
-	}
-	defer connSensor.Close()
-
-	for {
-		n, _, err := connSensor.ReadFrom(bufferSensors)
-		if err != nil {
-			fmt.Println("\nErro ao se comunicar com sensor: ", err)
-			continue
-		}
-
-		var received Sensor
-		err = json.Unmarshal(bufferSensors[:n], &received)
-		if err != nil {
-			fmt.Println("\nErro ao descompactar sensor: ", err)
-			continue
-		}
-
-		muSensor.Lock()
-		sensors[received.ID] = received
-		muSensor.Unlock()
-	}
-}
-
-func listenActuator() {
-	listenerActuator, err := net.Listen("tcp", ":9000")
-	if err != nil {
-		panic(err)
-	}
-	defer listenerActuator.Close()
-
-	for {
-		connActuator, err := listenerActuator.Accept()
-		if err != nil {
-			fmt.Println("\nErro na conexão com atuador: ", err)
-			continue
-		}
-
-		fmt.Println("\nAtuador conectado.")
-
-		go handleActuator(connActuator)
 	}
 }
 
 func listenClient() {
-	listenerClient, err := net.Listen("tcp", ":8000")
+	listenerClient, err := net.Listen("tcp", "127.0.0.1:8000")
 	if err != nil {
 		panic(err)
 	}
@@ -327,9 +368,9 @@ func listenClient() {
 		fmt.Println("\nCliente conectado.")
 		go handleClient(connClient)
 	}
-}
+} // Finalizada
 
-func saveFile() {
+/*func saveFile() {
 	for {
 		muSensor.Lock()
 		copySensors := maps.Clone(sensors)
@@ -349,19 +390,18 @@ func saveFile() {
 
 		time.Sleep(5 * time.Second)
 	}
-}
+}*/
 
 func main() {
 	fmt.Println("\nServidor inicializado.")
 
 	go listenSensor()
 	go listenActuator()
+	go listenClient()
 	go actuatorControl()
-	go saveFile()
-	listenClient()
+	//go saveFile()
+
+	select {}
 }
 
-//Parei na parte da mudança das três funções pra uma, aparentemente terminei, tem que testar.
-//Depois é pra mudar no cliente essa lógica. Fazer a lógica do cliente com atuador.
-//Consertar o controle do atuador pelo servidor.
-//Verificar se falta algum consertar algo na mudança da struct que eu fiz.
+/* Terminando a função do atuador, parece ser bom mudar as funções de request e response pra criar o encoder e decoder dentro dele mesmo, e verificar porque que tá passando o decoder da função request por ponteiro. Parei na função sendActuatorCommand.

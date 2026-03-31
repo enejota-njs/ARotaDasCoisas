@@ -28,28 +28,51 @@ type Request struct {
 	ID     string `json:"id"`
 	Action string `json:"action"`
 }
-type ResponseSensor struct {
+
+type Response struct {
 	Status string `json:"status"`
 	Data   Sensor `json:"data"`
 	Error  string `json:"error"`
 }
 
 type Sensor struct {
-	ID          string `json:"id"`
-	Temperature *int   `json:"temperature"`
-	Luminosity  *int   `json:"luminosity"`
-	Humidity    *int   `json:"humidity"`
+	ID    string `json:"id"`
+	Type  string `json:"type"`
+	Value int    `json:"value"`
+}
+
+func sendRequest(encoder *json.Encoder, request Request) error {
+	if err := encoder.Encode(request); err != nil {
+		fmt.Println("\nErro ao enviar requisição: ", err)
+		return err
+	}
+	return nil
+}
+
+func receiveResponse(decoder *json.Decoder, response *Response) error {
+	if err := decoder.Decode(response); err != nil {
+		fmt.Println("\nErro na resposta do servidor: ", err)
+		return err
+	}
+	return nil
+}
+
+func pressEnter() {
+	fmt.Println("\n\nPressione ENTER para continuar.")
+	fmt.Scanln()
 }
 
 func main() {
 	clearTerminal()
-	conn, err := net.Dial("tcp", "localhost:8000")
+	conn, err := net.Dial("tcp", "127.0.0.1:8000")
 	if err != nil {
-		fmt.Println("Erro ao conectar no servidor: ", err)
+		fmt.Println("\nErro ao conectar no servidor: ", err)
 		return
 	}
 	defer conn.Close()
 
+	encoder := json.NewEncoder(conn)
+	decoder := json.NewDecoder(conn)
 	input := bufio.NewReader(os.Stdin)
 
 	for {
@@ -80,6 +103,7 @@ func main() {
 		option = strings.TrimSpace(option)
 
 		var request Request
+		var response Response
 
 		switch option {
 		case "1":
@@ -87,98 +111,78 @@ func main() {
 				Action: "listSensors",
 			}
 
-			if err := json.NewEncoder(conn).Encode(request); err != nil {
-				fmt.Println("\nErro ao enviar requisição para o servidor: ", err)
+			if sendRequest(encoder, request) != nil {
+				pressEnter()
 				continue
 			}
 
-			decoder := json.NewDecoder(conn)
-
 			for {
-				var responseSensor ResponseSensor
-
-				if err := decoder.Decode(&responseSensor); err != nil {
-					fmt.Println("Erro ao receber resposta do servidor: ", err)
+				if receiveResponse(decoder, &response) != nil {
+					pressEnter()
 					break
 				}
 
-				if responseSensor.Status == "end" {
+				if response.Status == "end" {
+					pressEnter()
 					break
 				}
 
-				if responseSensor.Status != "success" {
-					fmt.Println("Erro: ", responseSensor.Error)
+				if response.Status == "error" {
+					fmt.Println("\nErro: ", response.Error)
+					pressEnter()
 					break
 				}
 
-				sensorResult := responseSensor.Data
-
-				if sensorResult.Temperature != nil {
-					fmt.Printf("\nTemperatura (%s)", sensorResult.ID)
-				}
-				if sensorResult.Humidity != nil {
-					fmt.Printf("\nUmidade (%s)", sensorResult.ID)
-				}
-				if sensorResult.Luminosity != nil {
-					fmt.Printf("\nLuminosidade (%s)", sensorResult.ID)
+				if response.Status == "success" {
+					sensor := response.Data
+					fmt.Printf("\n%s (%s)", sensor.Type, sensor.ID)
 				}
 			}
 
-			fmt.Print("\n\nPressione ENTER para voltar ao menu.")
-			fmt.Scanln()
+			fmt.Println("\n\n")
 
 		case "2":
 			request = Request{
 				Action: "verifySensors",
 			}
 
-			if err := json.NewEncoder(conn).Encode(request); err != nil {
-				fmt.Println("\nErro ao enviar requisição para o servidor: ", err)
+			if sendRequest(encoder, request) != nil {
+				pressEnter()
 				continue
 			}
 
-			decoder := json.NewDecoder(conn)
 			latest := make(map[string]Sensor)
 
 			for {
-				var responseSensor ResponseSensor
-
-				if err := decoder.Decode(&responseSensor); err != nil {
-					fmt.Println("\nErro ao receber resposta do servidor: ", err)
+				if receiveResponse(decoder, &response) != nil {
+					pressEnter()
 					break
 				}
 
-				if responseSensor.Status == "end" {
+				if response.Status == "end" {
 					break
 				}
 
-				if responseSensor.Status == "endOfRound" {
+				if response.Status == "error" {
+					fmt.Println("\nErro: ", response.Error)
+					pressEnter()
+					break
+				}
+
+				if response.Status == "endOfRound" {
 					clearTerminal()
 					fmt.Println("\nSensores: ")
 
 					for _, sensor := range latest {
-						if sensor.Temperature != nil {
-							fmt.Printf("\nTemperatura (%s) = %d ", sensor.ID, *sensor.Temperature)
-						}
-						if sensor.Humidity != nil {
-							fmt.Printf("\nUmidade (%s) = %d ", sensor.ID, *sensor.Humidity)
-						}
-						if sensor.Luminosity != nil {
-							fmt.Printf("\nLuminosidade (%s) = %d ", sensor.ID, *sensor.Luminosity)
-						}
+						fmt.Printf("\n%s (%s) = %d", sensor.Type, sensor.ID, sensor.Value)
 					}
 
 					continue
 				}
 
-				if responseSensor.Status == "error" {
-					fmt.Println("\nFalha: ", responseSensor.Error)
-					break
-				}
-
-				if responseSensor.Status == "success" {
-					sensorResult := responseSensor.Data
-					latest[sensorResult.ID] = sensorResult
+				if response.Status == "success" {
+					sensor := response.Data
+					latest[sensor.ID] = sensor
 				}
 			}
 
@@ -192,62 +196,46 @@ func main() {
 				Action: "selectSensor",
 			}
 
-			if err := json.NewEncoder(conn).Encode(request); err != nil {
-				fmt.Println("\nErro ao enviar requisição para o servidor: ", err)
-				return
+			if sendRequest(encoder, request) != nil {
+				pressEnter()
+				continue
 			}
 
-			decoder := json.NewDecoder(conn)
-
 			for {
-				var responseSensor ResponseSensor
-
-				if err := decoder.Decode(&responseSensor); err != nil {
-					fmt.Println("\nErro ao receber resposta do servidor: ", err)
-					return
-				}
-
-				if responseSensor.Status == "end" {
+				if receiveResponse(decoder, &response) != nil {
+					pressEnter()
 					break
 				}
 
-				if responseSensor.Status == "error" {
-					fmt.Println("\nFalha: ", responseSensor.Error)
-					return
+				if response.Status == "end" {
+					break
 				}
 
-				if responseSensor.Status == "success" {
+				if response.Status == "error" {
+					fmt.Println("\nErro: ", response.Error)
+					pressEnter()
+					break
+				}
+
+				if response.Status == "success" {
 					clearTerminal()
 
-					sensor := responseSensor.Data
+					sensor := response.Data
 
 					fmt.Println("\nSensor: ")
-
-					if sensor.Temperature != nil {
-						fmt.Printf("\nTemperatura (%s) = %d ", sensor.ID, *sensor.Temperature)
-					}
-					if sensor.Humidity != nil {
-						fmt.Printf("\nUmidade (%s) = %d ", sensor.ID, *sensor.Humidity)
-					}
-					if sensor.Luminosity != nil {
-						fmt.Printf("\nLuminosidade (%s) = %d ", sensor.ID, *sensor.Luminosity)
-					}
+					fmt.Printf("\n%s (%s) = %d", sensor.Type, sensor.ID, sensor.Value)
 				}
 			}
 		case "4":
-
 		case "5":
 		case "6":
-
 		case "7":
 			conn.Close()
 			return
 
 		default:
 			fmt.Println("\nOpção inválida.")
-
-			fmt.Print("\nPressione ENTER para voltar ao menu.")
-			fmt.Scanln()
+			pressEnter()
 			continue
 		}
 	}
