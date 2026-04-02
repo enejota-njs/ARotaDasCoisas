@@ -56,6 +56,7 @@ func listenServer(actuator *Actuator, conn net.Conn) {
 }
 
 func main() {
+	clearTerminal()
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("\nDigite o ID da lâmpada: ")
 	id, _ := reader.ReadString('\n')
@@ -93,7 +94,7 @@ func main() {
 			on = "Ligado"
 		}
 
-		fmt.Printf("%s (%s) = %s", actuator.Type, actuator.ID, on)
+		fmt.Printf("\n%s (%s) = %s", actuator.Type, actuator.ID, on)
 		time.Sleep(1 * time.Second)
 	}
 }

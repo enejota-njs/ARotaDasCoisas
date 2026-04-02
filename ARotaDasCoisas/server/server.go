@@ -13,9 +13,10 @@ import (
 )
 
 type Response struct {
-	Status string `json:"status"`
-	Data   Sensor `json:"data"`
-	Error  string `json:"error"`
+	Status       string   `json:"status"`
+	DataSensor   Sensor   `json:"dataSensor"`
+	DataActuator Actuator `json:"dataActuator"`
+	Error        string   `json:"error"`
 }
 
 type Sensor struct {
@@ -29,18 +30,25 @@ type Request struct {
 	Action string `json:"action"`
 }
 
-type Actuator struct {
+type ActuatorConn struct {
 	Conn net.Conn `json:"conn"`
 	ID   string   `json:"id"`
 	Type string   `json:"type"`
 	On   bool     `json:"on"`
 }
 
+type Actuator struct {
+	ID   string `json:"id"`
+	Type string `json:"type"`
+	On   bool   `json:"on"`
+}
+
 var (
-	sensors    = make(map[string]Sensor)
-	actuators  = make(map[string]Actuator)
-	muSensor   sync.Mutex
-	muActuator sync.Mutex
+	sensors            = make(map[string]Sensor)
+	actuators          = make(map[string]ActuatorConn)
+	muSensor           sync.Mutex
+	muActuator         sync.Mutex
+	permissionActuator = make(map[string]bool)
 )
 
 func clearTerminal() {
@@ -80,7 +88,7 @@ func sendRequest(conn net.Conn, request Request) error {
 	encoder := json.NewEncoder(conn)
 
 	if err := encoder.Encode(request); err != nil {
-		fmt.Println("\nErro ao enviar command: ", err)
+		fmt.Println("\nErro ao enviar commando: ", err)
 		return err
 	}
 	return nil
@@ -108,28 +116,12 @@ func checkListActuators() bool {
 	return true
 } // Finalizada
 
-/*func listActuators(conn net.Conn) {
-
-}
-
-func verifyActuators(conn net.Conn) {
-
-}
-
-func selectActuator() {
-
-}*/
-
-// == ACTUATOR
-
-func sendActuatorCommand(id, command string) {
+func sendActuatorCommand(id, command string) error {
 	muActuator.Lock()
 	actuator, ok := actuators[id]
-	muActuator.Unlock()
-
 	if !ok {
-		fmt.Printf("\nAtuador do sensor (%d) não encontrado", id)
-		return
+		muActuator.Unlock()
+		return fmt.Errorf("\nAtuador (%s) não encontrado", id)
 	}
 
 	request := Request{
@@ -138,13 +130,27 @@ func sendActuatorCommand(id, command string) {
 	}
 
 	if sendRequest(actuator.Conn, request) != nil {
-		return
+		muActuator.Unlock()
+		return fmt.Errorf("\nErro encontrado", id)
 	}
-}
+
+	switch command {
+	case "on":
+		actuator.On = true
+	case "off":
+		actuator.On = false
+	}
+
+	actuators[id] = actuator
+	muActuator.Unlock()
+
+	return nil
+} //Finalizada
 
 func actuatorControl() {
 	for {
-		if !checkListActuators() || !checkListSensors() {
+		if !checkListSensors() {
+			time.Sleep(100 * time.Millisecond)
 			continue
 		}
 
@@ -153,36 +159,301 @@ func actuatorControl() {
 		muSensor.Unlock()
 
 		for id, sensor := range copySensors {
+			muActuator.Lock()
+			locked := permissionActuator[id]
+			muActuator.Unlock()
+
+			if locked {
+				continue
+			}
+
 			switch sensor.Type {
 
 			case "Luminosidade":
 				if sensor.Value >= 50 {
-					sendActuatorCommand(sensor.ID, "off")
+					_ = sendActuatorCommand(sensor.ID, "off")
 				} else {
-					sendActuatorCommand(sensor.ID, "on")
+					_ = sendActuatorCommand(sensor.ID, "on")
 				}
 			case "Umidade":
 				if sensor.Value >= 70 {
-					sendActuatorCommand(id, "off")
+					_ = sendActuatorCommand(id, "off")
 				} else {
-					sendActuatorCommand(id, "on")
+					_ = sendActuatorCommand(id, "on")
 				}
 			case "Temperatura":
 				if sensor.Value >= 20 {
-					sendActuatorCommand(id, "on")
+					_ = sendActuatorCommand(id, "on")
 				} else {
-					sendActuatorCommand(id, "off")
+					_ = sendActuatorCommand(id, "off")
 				}
 			}
 
 		}
 		time.Sleep(1 * time.Second)
 	}
+} // Finalizada
+
+func actuatorClientRequest(conn net.Conn, request Request) {
+	if !checkListActuators() {
+		response := Response{
+			Status: "error",
+			Error:  "Lista de atuadores vazia",
+		}
+
+		_ = sendResponse(conn, response)
+		return
+	}
+
+	switch request.Action {
+	case "listActuators":
+		muActuator.Lock()
+		copyActuators := maps.Clone(actuators)
+		muActuator.Unlock()
+
+		for _, actuator := range copyActuators {
+			response := Response{
+				Status: "success",
+				DataActuator: Actuator{
+					ID:   actuator.ID,
+					Type: actuator.Type,
+				},
+			}
+
+			if sendResponse(conn, response) != nil {
+				return
+			}
+		}
+
+		response := Response{
+			Status: "end",
+		}
+		_ = sendResponse(conn, response)
+
+	case "verifyActuators":
+		start := time.Now()
+
+		for {
+			if time.Since(start) >= 10*time.Second {
+				response := Response{
+					Status: "end",
+				}
+				_ = sendResponse(conn, response)
+				return
+			}
+
+			muActuator.Lock()
+			copyActuators := maps.Clone(actuators)
+			muActuator.Unlock()
+
+			for _, actuator := range copyActuators {
+				response := Response{
+					Status: "success",
+					DataActuator: Actuator{
+						ID:   actuator.ID,
+						Type: actuator.Type,
+						On:   actuator.On,
+					},
+				}
+
+				if sendResponse(conn, response) != nil {
+					return
+				}
+			}
+
+			response := Response{
+				Status: "endOfRound",
+			}
+
+			if sendResponse(conn, response) != nil {
+				return
+			}
+
+			time.Sleep(1 * time.Second)
+		}
+	case "selectActuator":
+		start := time.Now()
+
+		for {
+			if time.Since(start) >= 10*time.Second {
+				response := Response{
+					Status: "end",
+				}
+				_ = sendResponse(conn, response)
+				return
+			}
+
+			muActuator.Lock()
+			copyActuators := maps.Clone(actuators)
+			muActuator.Unlock()
+
+			actuator, ok := copyActuators[request.ID]
+			if !ok {
+				response := Response{
+					Status: "error",
+					Error:  "Atuador não encontrado",
+				}
+				_ = sendResponse(conn, response)
+				return
+			}
+
+			response := Response{
+				Status: "success",
+				DataActuator: Actuator{
+					ID:   actuator.ID,
+					Type: actuator.Type,
+					On:   actuator.On,
+				},
+			}
+
+			if sendResponse(conn, response) != nil {
+				return
+			}
+
+			time.Sleep(1 * time.Second)
+		}
+
+	case "onActuator", "offActuator":
+		var action string
+		if request.Action == "onActuator" {
+			action = "on"
+		} else if request.Action == "offActuator" {
+			action = "off"
+		}
+
+		if err := sendActuatorCommand(request.ID, action); err != nil {
+			_ = sendResponse(conn, Response{
+				Status: "error",
+				Error:  err.Error(),
+			})
+			return
+		}
+
+		muActuator.Lock()
+		permissionActuator[request.ID] = true
+		actuator := actuators[request.ID]
+		muActuator.Unlock()
+
+		response := Response{
+			Status: "success",
+			DataActuator: Actuator{
+				ID:   actuator.ID,
+				Type: actuator.Type,
+				On:   actuator.On,
+			},
+		}
+
+		if sendResponse(conn, response) != nil {
+			return
+		}
+
+		go func(id string) {
+			time.Sleep(10 * time.Second)
+			muActuator.Lock()
+			permissionActuator[id] = false
+			muActuator.Unlock()
+		}(request.ID)
+	}
 }
+
+func sensorClientRequest(conn net.Conn, request Request) {
+	if !checkListSensors() {
+		response := Response{
+			Status: "error",
+			Error:  "Lista de sensores vazia",
+		}
+
+		_ = sendResponse(conn, response)
+		return
+	}
+
+	switch request.Action {
+	case "listSensors":
+		muSensor.Lock()
+		copySensors := maps.Clone(sensors)
+		muSensor.Unlock()
+
+		for _, sensor := range copySensors {
+			response := Response{
+				Status:     "success",
+				DataSensor: sensor,
+			}
+
+			if sendResponse(conn, response) != nil {
+				return
+			}
+		}
+
+		response := Response{
+			Status: "end",
+		}
+		_ = sendResponse(conn, response)
+
+	case "verifySensors", "selectSensor":
+		start := time.Now()
+
+		for {
+			if time.Since(start) >= 10*time.Second {
+				response := Response{
+					Status: "end",
+				}
+				_ = sendResponse(conn, response)
+				return
+			}
+
+			muSensor.Lock()
+			copySensors := maps.Clone(sensors)
+			muSensor.Unlock()
+
+			if request.Action == "verifySensors" {
+				for _, sensor := range copySensors {
+					response := Response{
+						Status:     "success",
+						DataSensor: sensor,
+					}
+					if sendResponse(conn, response) != nil {
+						return
+					}
+				}
+
+				response := Response{
+					Status: "endOfRound",
+				}
+
+				if sendResponse(conn, response) != nil {
+					return
+				}
+			} else if request.Action == "selectSensor" {
+				sensor, ok := copySensors[request.ID]
+				if !ok {
+					response := Response{
+						Status: "error",
+						Error:  "Sensor não encontrado",
+					}
+					_ = sendResponse(conn, response)
+					return
+				}
+
+				response := Response{
+					Status:     "success",
+					DataSensor: sensor,
+				}
+
+				if sendResponse(conn, response) != nil {
+					return
+				}
+			}
+
+			time.Sleep(1 * time.Second)
+		}
+	}
+}
+
+// == ACTUATOR
 
 func handleActuator(conn net.Conn) {
 	decoder := json.NewDecoder(conn)
-	var actuator Actuator
+	var actuator ActuatorConn
 
 	if err := decoder.Decode(&actuator); err != nil {
 		fmt.Println("\nErro ao registrar atuador no servidor: ", err)
@@ -191,7 +462,7 @@ func handleActuator(conn net.Conn) {
 	}
 
 	muActuator.Lock()
-	actuators[actuator.ID] = Actuator{
+	actuators[actuator.ID] = ActuatorConn{
 		Conn: conn,
 		ID:   actuator.ID,
 		Type: actuator.Type,
@@ -254,99 +525,6 @@ func listenSensor() {
 	}
 } // Finalizada
 
-func sensorClientRequest(conn net.Conn, request Request) {
-	if !checkListSensors() {
-		response := Response{
-			Status: "error",
-			Error:  "Lista de sensores vazia",
-		}
-
-		_ = sendResponse(conn, response)
-		return
-	}
-
-	switch request.Action {
-	case "listSensors":
-		muSensor.Lock()
-		copySensors := maps.Clone(sensors)
-		muSensor.Unlock()
-
-		for _, sensor := range copySensors {
-			response := Response{
-				Status: "success",
-				Data:   sensor,
-			}
-
-			if sendResponse(conn, response) != nil {
-				return
-			}
-		}
-
-		response := Response{
-			Status: "end",
-		}
-		_ = sendResponse(conn, response)
-
-	case "verifySensors", "selectSensor":
-		start := time.Now()
-
-		for {
-			if time.Since(start) >= 10*time.Second {
-				response := Response{
-					Status: "end",
-				}
-				_ = sendResponse(conn, response)
-				return
-			}
-
-			muSensor.Lock()
-			copySensors := maps.Clone(sensors)
-			muSensor.Unlock()
-
-			if request.Action == "verifySensors" {
-				for _, sensor := range copySensors {
-					response := Response{
-						Status: "success",
-						Data:   sensor,
-					}
-					if sendResponse(conn, response) != nil {
-						return
-					}
-				}
-
-				response := Response{
-					Status: "endOfRound",
-				}
-
-				if sendResponse(conn, response) != nil {
-					return
-				}
-			} else if request.Action == "selectSensor" {
-				sensor, ok := copySensors[request.ID]
-				if !ok {
-					response := Response{
-						Status: "error",
-						Error:  "Sensor não encontrado",
-					}
-					_ = sendResponse(conn, response)
-					return
-				}
-
-				response := Response{
-					Status: "success",
-					Data:   sensor,
-				}
-
-				if sendResponse(conn, response) != nil {
-					return
-				}
-			}
-
-			time.Sleep(1 * time.Second)
-		}
-	}
-} // Finalizada
-
 // == CLIENT
 
 func handleClient(conn net.Conn) {
@@ -363,6 +541,8 @@ func handleClient(conn net.Conn) {
 		switch request.Action {
 		case "listSensors", "verifySensors", "selectSensor":
 			sensorClientRequest(conn, request)
+		case "listActuators", "verifyActuators", "selectActuator", "onActuator", "offActuator":
+			actuatorClientRequest(conn, request)
 		}
 	}
 }
