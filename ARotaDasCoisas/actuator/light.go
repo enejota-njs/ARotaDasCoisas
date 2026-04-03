@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
-	"time"
 )
 
 type Request struct {
@@ -36,25 +35,6 @@ func clearTerminal() {
 	cmd.Run()
 }
 
-func listenServer(actuator *Actuator, conn net.Conn) {
-	decoder := json.NewDecoder(conn)
-	request := Request{}
-
-	for {
-		if err := decoder.Decode(&request); err != nil {
-			fmt.Println("\nErro na requisição do servidor: ", err)
-			return
-		}
-
-		if request.Action == "on" {
-			actuator.On = true
-		}
-		if request.Action == "off" {
-			actuator.On = false
-		}
-	}
-}
-
 func main() {
 	clearTerminal()
 	reader := bufio.NewReader(os.Stdin)
@@ -69,8 +49,6 @@ func main() {
 	}
 	defer conn.Close()
 
-	fmt.Println("\nConectado ao servidor.")
-
 	actuator := Actuator{
 		ID:   id,
 		Type: "Light",
@@ -81,11 +59,38 @@ func main() {
 		return
 	}
 
-	go listenServer(&actuator, conn)
-
 	var on string
+	clearTerminal()
+	fmt.Println("\nConectado ao servidor")
+
+	if !actuator.On {
+		on = "Desligado"
+	}
+	if actuator.On {
+		on = "Ligado"
+	}
+
+	fmt.Printf("\n- %s (%s) = %s", actuator.Type, actuator.ID, on)
+
+	decoder := json.NewDecoder(conn)
+	request := Request{}
+
 	for {
+		if err := decoder.Decode(&request); err != nil {
+			clearTerminal()
+			fmt.Println("\nDesconectado ao servidor")
+			return
+		}
+
+		if request.Action == "on" {
+			actuator.On = true
+		}
+		if request.Action == "off" {
+			actuator.On = false
+		}
+
 		clearTerminal()
+		fmt.Println("\nConectado ao servidor")
 
 		if !actuator.On {
 			on = "Desligado"
@@ -94,7 +99,6 @@ func main() {
 			on = "Ligado"
 		}
 
-		fmt.Printf("\n%s (%s) = %s", actuator.Type, actuator.ID, on)
-		time.Sleep(1 * time.Second)
+		fmt.Printf("\n- %s (%s) = %s", actuator.Type, actuator.ID, on)
 	}
 }

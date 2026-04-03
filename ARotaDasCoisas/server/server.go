@@ -68,11 +68,11 @@ func clearTerminal() {
 
 func receiveRequest(decoder *json.Decoder, request *Request) error {
 	if err := decoder.Decode(request); err != nil {
-		fmt.Println("\nErro na requisição: ", err)
+		fmt.Println("\nCliente desconectado: ", err)
 		return err
 	}
 	return nil
-} // Finalizada
+}
 
 func sendResponse(conn net.Conn, response Response) error {
 	encoder := json.NewEncoder(conn)
@@ -82,7 +82,7 @@ func sendResponse(conn net.Conn, response Response) error {
 		return err
 	}
 	return nil
-} // Finalizada
+}
 
 func sendRequest(conn net.Conn, request Request) error {
 	encoder := json.NewEncoder(conn)
@@ -92,7 +92,7 @@ func sendRequest(conn net.Conn, request Request) error {
 		return err
 	}
 	return nil
-} // Finalizada
+}
 
 func checkListSensors() bool {
 	muSensor.Lock()
@@ -103,7 +103,7 @@ func checkListSensors() bool {
 		return false
 	}
 	return true
-} // Finalizada
+}
 
 func checkListActuators() bool {
 	muActuator.Lock()
@@ -114,14 +114,21 @@ func checkListActuators() bool {
 		return false
 	}
 	return true
-} // Finalizada
+}
 
 func sendActuatorCommand(id, command string) error {
 	muActuator.Lock()
 	actuator, ok := actuators[id]
+
 	if !ok {
 		muActuator.Unlock()
+		fmt.Printf("\nAtuador (%s) não encontrado\n", id)
 		return fmt.Errorf("\nAtuador (%s) não encontrado", id)
+	}
+
+	if (command == "on" && actuator.On) || (command == "off" && !actuator.On) {
+		muActuator.Unlock()
+		return nil
 	}
 
 	request := Request{
@@ -130,8 +137,10 @@ func sendActuatorCommand(id, command string) error {
 	}
 
 	if sendRequest(actuator.Conn, request) != nil {
+		delete(actuators, id)
+		fmt.Printf("\nAtuador %s (%s) não encontrado\n", actuator.Type, id)
 		muActuator.Unlock()
-		return fmt.Errorf("\nErro encontrado", id)
+		return fmt.Errorf("\nAtuador (%s) não encontrado\n", id)
 	}
 
 	switch command {
@@ -145,7 +154,7 @@ func sendActuatorCommand(id, command string) error {
 	muActuator.Unlock()
 
 	return nil
-} //Finalizada
+}
 
 func actuatorControl() {
 	for {
@@ -192,7 +201,7 @@ func actuatorControl() {
 		}
 		time.Sleep(1 * time.Second)
 	}
-} // Finalizada
+}
 
 func actuatorClientRequest(conn net.Conn, request Request) {
 	if !checkListActuators() {
@@ -471,7 +480,27 @@ func handleActuator(conn net.Conn) {
 	muActuator.Unlock()
 
 	fmt.Printf("\nAtuador registrado: %s (%s)\n", actuator.Type, actuator.ID)
-} // Finalizada
+
+	go func(id string, c net.Conn) {
+		defer c.Close()
+
+		decoder := json.NewDecoder(c)
+		var message map[string]any
+
+		for {
+			if err := decoder.Decode(&message); err != nil {
+				muActuator.Lock()
+				a, ok := actuators[id]
+				if ok && a.Conn == c {
+					delete(actuators, id)
+					fmt.Printf("\nAtuador desconectado: %s\n", id)
+				}
+				muActuator.Unlock()
+				return
+			}
+		}
+	}(actuator.ID, conn)
+}
 
 func listenActuator() {
 	listenerActuator, err := net.Listen("tcp", "127.0.0.1:9000")
@@ -487,11 +516,9 @@ func listenActuator() {
 			continue
 		}
 
-		fmt.Println("\nAtuador conectado.")
-
 		go handleActuator(connActuator)
 	}
-} // Finalizada
+}
 
 // == SENSOR
 
@@ -523,7 +550,7 @@ func listenSensor() {
 		sensors[received.ID] = received
 		muSensor.Unlock()
 	}
-} // Finalizada
+}
 
 // == CLIENT
 
@@ -561,10 +588,10 @@ func listenClient() {
 			continue
 		}
 
-		fmt.Println("\nCliente conectado.")
+		fmt.Println("\nCliente conectado")
 		go handleClient(connClient)
 	}
-} // Finalizada
+}
 
 /*func saveFile() {
 	for {
@@ -590,7 +617,7 @@ func listenClient() {
 
 func main() {
 	clearTerminal()
-	fmt.Println("\nServidor inicializado.")
+	fmt.Println("\nServidor inicializado")
 
 	go listenSensor()
 	go listenActuator()

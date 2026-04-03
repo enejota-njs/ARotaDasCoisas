@@ -65,15 +65,16 @@ func clearTerminal() {
 }
 
 func pressEnter() {
-	fmt.Println("\n\nPressione ENTER para continuar.")
-	fmt.Scanln()
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("\nPressione ENTER para continuar")
+	reader.ReadString('\n')
 }
 
 func main() {
 	clearTerminal()
 	conn, err := net.Dial("tcp", "127.0.0.1:8000")
 	if err != nil {
-		fmt.Println("\nErro ao conectar no servidor: ", err)
+		fmt.Println("\nServidor não inicializado")
 		return
 	}
 	defer conn.Close()
@@ -144,7 +145,7 @@ func main() {
 				}
 
 				if response.Status == "error" {
-					fmt.Println("\nErro: ", response.Error)
+					fmt.Printf("\n%s\n", response.Error)
 					pressEnter()
 					break
 				}
@@ -152,15 +153,13 @@ func main() {
 				if response.Status == "success" {
 					if option == "1" {
 						sensor := response.DataSensor
-						fmt.Printf("\n%s (%s)", sensor.Type, sensor.ID)
+						fmt.Printf("\n- %s (%s)\n", sensor.Type, sensor.ID)
 					} else if option == "4" {
 						actuator := response.DataActuator
-						fmt.Printf("\n%s (%s)", actuator.Type, actuator.ID)
+						fmt.Printf("\n- %s (%s)\n", actuator.Type, actuator.ID)
 					}
 				}
 			}
-
-			fmt.Println("\n\n")
 
 		case "2", "5":
 
@@ -194,7 +193,7 @@ func main() {
 				}
 
 				if response.Status == "error" {
-					fmt.Println("\nErro: ", response.Error)
+					fmt.Printf("\n%s\n", response.Error)
 					pressEnter()
 					break
 				}
@@ -205,7 +204,7 @@ func main() {
 					if option == "2" {
 						fmt.Println("\nSensores: ")
 						for _, sensor := range latestSensors {
-							fmt.Printf("\n%s (%s) = %d", sensor.Type, sensor.ID, sensor.Value)
+							fmt.Printf("\n- %s (%s) = %d", sensor.Type, sensor.ID, sensor.Value)
 						}
 					} else if option == "5" {
 						fmt.Println("\nAtuadores: ")
@@ -214,7 +213,7 @@ func main() {
 							if actuator.On {
 								on = "Ligado"
 							}
-							fmt.Printf("\n%s (%s) = %s", actuator.Type, actuator.ID, on)
+							fmt.Printf("\n- %s (%s) = %s", actuator.Type, actuator.ID, on)
 						}
 					}
 
@@ -258,7 +257,7 @@ func main() {
 				}
 
 				if response.Status == "error" {
-					fmt.Println("\nErro: ", response.Error)
+					fmt.Printf("\n%s\n", response.Error)
 					pressEnter()
 					break
 				}
@@ -269,7 +268,7 @@ func main() {
 					sensor := response.DataSensor
 
 					fmt.Println("\nSensor: ")
-					fmt.Printf("\n%s (%s) = %d", sensor.Type, sensor.ID, sensor.Value)
+					fmt.Printf("\n- %s (%s) = %d", sensor.Type, sensor.ID, sensor.Value)
 				}
 			}
 		case "6":
@@ -290,12 +289,12 @@ func main() {
 			optionAc, _ := input.ReadString('\n')
 			optionAc = strings.TrimSpace(optionAc)
 
-			fmt.Print("\nDigite o ID do atuador: ")
-			id, _ := input.ReadString('\n')
-			id = strings.TrimSpace(id)
-
 			switch optionAc {
 			case "1":
+				fmt.Print("\nDigite o ID do atuador: ")
+				id, _ := input.ReadString('\n')
+				id = strings.TrimSpace(id)
+
 				request = Request{
 					ID:     id,
 					Action: "selectActuator",
@@ -317,7 +316,7 @@ func main() {
 					}
 
 					if response.Status == "error" {
-						fmt.Println("\nErro: ", response.Error)
+						fmt.Printf("\n%s\n", response.Error)
 						pressEnter()
 						break
 					}
@@ -332,10 +331,14 @@ func main() {
 						if actuator.On {
 							on = "Ligado"
 						}
-						fmt.Printf("\n%s (%s) = %s", actuator.Type, actuator.ID, on)
+						fmt.Printf("\n- %s (%s) = %s", actuator.Type, actuator.ID, on)
 					}
 				}
 			case "2":
+				fmt.Print("\nDigite o ID do atuador: ")
+				id, _ := input.ReadString('\n')
+				id = strings.TrimSpace(id)
+
 				clearTerminal()
 
 				fmt.Println("\n|--------------------------------|")
@@ -352,6 +355,25 @@ func main() {
 				fmt.Print("\nSelecione uma opção: ")
 				optionPower, _ := input.ReadString('\n')
 				optionPower = strings.TrimSpace(optionPower)
+
+				switch optionPower {
+				case "1":
+					request = Request{
+						ID:     id,
+						Action: "onActuator",
+					}
+				case "2":
+					request = Request{
+						ID:     id,
+						Action: "offActuator",
+					}
+				case "3":
+					continue
+				default:
+					fmt.Println("\nOpção inválida.")
+					pressEnter()
+					continue
+				}
 
 				if optionPower == "1" {
 					request = Request{
@@ -376,7 +398,7 @@ func main() {
 				}
 
 				if response.Status == "error" {
-					fmt.Println("\nErro: ", response.Error)
+					fmt.Printf("\n%s\n", response.Error)
 					pressEnter()
 					break
 				}
@@ -388,13 +410,21 @@ func main() {
 					if actuator.On {
 						on = "Ligado"
 					}
-					fmt.Printf("\n%s (%s) = %s", actuator.Type, actuator.ID, on)
+					fmt.Printf("\n- %s (%s) = %s\n", actuator.Type, actuator.ID, on)
 				}
 
 				pressEnter()
+			case "3":
+				continue
+			default:
+				fmt.Println("\nOpção inválida.")
+				pressEnter()
+				continue
 			}
 		case "7":
+			fmt.Println("\nSessão finalizada")
 			conn.Close()
+			pressEnter()
 			return
 
 		default:
