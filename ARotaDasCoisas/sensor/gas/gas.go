@@ -33,19 +33,20 @@ func step(value int) int {
 		value -= 3
 	}
 
-	if value > 400 {
-		value = 400
+	if value > 500 {
+		value = 500
 	}
 	if value < 0 {
 		value = 0
 	}
+
 	return value
 }
 
 func readId(reader *bufio.Reader) string {
 	for {
 		clearTerminal()
-		fmt.Print("\nDigite o ID do sensor de luminosidade: ")
+		fmt.Print("\nDigite o ID do sensor de gás: ")
 		idStr, _ := reader.ReadString('\n')
 		idStr = strings.TrimSpace(idStr)
 
@@ -67,10 +68,10 @@ func main() {
 
 	reader := bufio.NewReader(os.Stdin)
 	id := readId(reader)
-	lumi := rand.Intn(401)
+	gas := rand.Intn(101)
 
 	clearTerminal()
-	fmt.Printf("\nSensor de luminosidade %s inicializado.\n", id)
+	fmt.Printf("\nSensor de gás %s inicializado.\n", id)
 
 	for {
 		conn, err := net.Dial("udp", "127.0.0.1:7000")
@@ -81,20 +82,20 @@ func main() {
 		counter := 0
 
 		for {
-			lumi = step(lumi)
+			gas = step(gas)
 
 			if counter >= 1000 {
 				data := Sensor{
 					ID:    id,
-					Type:  "Luminosidade",
-					Value: lumi,
+					Type:  "Gás",
+					Value: gas,
 				}
 
 				values, _ := json.Marshal(data)
 
 				_, err := conn.Write(values)
 				if err != nil {
-					fmt.Println("\nErro no envio do sensor de luminosidade: ", id, err)
+					fmt.Println("\nErro no envio do sensor de gás: ", id, err)
 					conn.Close()
 					break
 				}
@@ -121,12 +122,12 @@ func main() {
 					reader.ReadString('\n')
 					id = readId(reader)
 					clearTerminal()
-					fmt.Printf("\nSensor de luminosidade %s inicializado.\n", id)
+					fmt.Printf("\nSensor de gás %s inicializado.\n", id)
 					counter = 0
 					continue
 				}
 
-				fmt.Println(lumi)
+				fmt.Println(gas)
 				counter = 0
 			}
 

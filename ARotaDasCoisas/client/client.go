@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
 )
 
 type Request struct {
@@ -37,7 +38,7 @@ type Actuator struct {
 
 func sendRequest(encoder *json.Encoder, request Request) error {
 	if err := encoder.Encode(request); err != nil {
-		fmt.Println("\nErro ao enviar requisição: ", err)
+		fmt.Println("\nDesconectado ao servidor")
 		return err
 	}
 	return nil
@@ -45,7 +46,7 @@ func sendRequest(encoder *json.Encoder, request Request) error {
 
 func receiveResponse(decoder *json.Decoder, response *Response) error {
 	if err := decoder.Decode(response); err != nil {
-		fmt.Println("\nErro na resposta do servidor: ", err)
+		fmt.Println("\nDesconectado ao sevidor")
 		return err
 	}
 	return nil
@@ -72,12 +73,19 @@ func pressEnter() {
 
 func main() {
 	clearTerminal()
-	conn, err := net.Dial("tcp", "127.0.0.1:8000")
-	if err != nil {
-		fmt.Println("\nServidor não inicializado")
-		return
+	var conn net.Conn
+	var err error
+
+	for {
+		conn, err = net.Dial("tcp", "127.0.0.1:8000")
+		if err != nil {
+			fmt.Println("\nServidor não inicializado")
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		break
 	}
-	defer conn.Close()
 
 	encoder := json.NewEncoder(conn)
 	decoder := json.NewDecoder(conn)
@@ -129,14 +137,16 @@ func main() {
 			}
 
 			if sendRequest(encoder, request) != nil {
+				conn.Close()
 				pressEnter()
-				continue
+				return
 			}
 
 			for {
 				if receiveResponse(decoder, &response) != nil {
+					conn.Close()
 					pressEnter()
-					break
+					return
 				}
 
 				if response.Status == "end" {
@@ -175,8 +185,9 @@ func main() {
 			}
 
 			if sendRequest(encoder, request) != nil {
+				conn.Close()
 				pressEnter()
-				continue
+				return
 			}
 
 			latestSensors := make(map[string]Sensor)
@@ -184,8 +195,9 @@ func main() {
 
 			for {
 				if receiveResponse(decoder, &response) != nil {
+					conn.Close()
 					pressEnter()
-					break
+					return
 				}
 
 				if response.Status == "end" {
@@ -202,9 +214,27 @@ func main() {
 					clearTerminal()
 
 					if option == "2" {
-						fmt.Println("\nSensores: ")
+						fmt.Println("\nSensores:")
 						for _, sensor := range latestSensors {
-							fmt.Printf("\n- %s (%s) = %d", sensor.Type, sensor.ID, sensor.Value)
+							unit := ""
+
+							if sensor.Type == "Luminosidade" {
+								unit = "lux"
+							}
+							if sensor.Type == "Umidade" {
+								unit = "%"
+							}
+							if sensor.Type == "Temperatura" {
+								unit = "°C"
+							}
+							if sensor.Type == "Fumaça" {
+								unit = "ppm"
+							}
+							if sensor.Type == "Gás" {
+								unit = "ppm"
+							}
+
+							fmt.Printf("\n- %s (%s) = %d %s", sensor.Type, sensor.ID, sensor.Value, unit)
 						}
 					} else if option == "5" {
 						fmt.Println("\nAtuadores: ")
@@ -242,14 +272,16 @@ func main() {
 			}
 
 			if sendRequest(encoder, request) != nil {
+				conn.Close()
 				pressEnter()
-				continue
+				return
 			}
 
 			for {
 				if receiveResponse(decoder, &response) != nil {
+					conn.Close()
 					pressEnter()
-					break
+					return
 				}
 
 				if response.Status == "end" {
@@ -268,7 +300,25 @@ func main() {
 					sensor := response.DataSensor
 
 					fmt.Println("\nSensor: ")
-					fmt.Printf("\n- %s (%s) = %d", sensor.Type, sensor.ID, sensor.Value)
+					unit := ""
+
+					if sensor.Type == "Luminosidade" {
+						unit = "lux"
+					}
+					if sensor.Type == "Umidade" {
+						unit = "%"
+					}
+					if sensor.Type == "Temperatura" {
+						unit = "°C"
+					}
+					if sensor.Type == "Fumaça" {
+						unit = "ppm"
+					}
+					if sensor.Type == "Gás" {
+						unit = "ppm"
+					}
+
+					fmt.Printf("\n- %s (%s) = %d %s", sensor.Type, sensor.ID, sensor.Value, unit)
 				}
 			}
 		case "6":
@@ -301,14 +351,16 @@ func main() {
 				}
 
 				if sendRequest(encoder, request) != nil {
+					conn.Close()
 					pressEnter()
-					continue
+					return
 				}
 
 				for {
 					if receiveResponse(decoder, &response) != nil {
+						conn.Close()
 						pressEnter()
-						break
+						return
 					}
 
 					if response.Status == "end" {
@@ -388,13 +440,15 @@ func main() {
 				}
 
 				if sendRequest(encoder, request) != nil {
+					conn.Close()
 					pressEnter()
-					continue
+					return
 				}
 
 				if receiveResponse(decoder, &response) != nil {
+					conn.Close()
 					pressEnter()
-					break
+					return
 				}
 
 				if response.Status == "error" {

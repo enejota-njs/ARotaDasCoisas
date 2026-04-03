@@ -28,24 +28,25 @@ type Response struct {
 func step(value int) int {
 	r := rand.Float64()
 	if r > 0.5 {
-		value += 3
+		value += 1
 	} else {
-		value -= 3
+		value -= 1
 	}
 
-	if value > 400 {
-		value = 400
+	if value > 300 {
+		value = 300
 	}
 	if value < 0 {
 		value = 0
 	}
+
 	return value
 }
 
 func readId(reader *bufio.Reader) string {
 	for {
 		clearTerminal()
-		fmt.Print("\nDigite o ID do sensor de luminosidade: ")
+		fmt.Print("\nDigite o ID do sensor de fumaça: ")
 		idStr, _ := reader.ReadString('\n')
 		idStr = strings.TrimSpace(idStr)
 
@@ -67,10 +68,10 @@ func main() {
 
 	reader := bufio.NewReader(os.Stdin)
 	id := readId(reader)
-	lumi := rand.Intn(401)
+	smo := rand.Intn(301)
 
 	clearTerminal()
-	fmt.Printf("\nSensor de luminosidade %s inicializado.\n", id)
+	fmt.Printf("\nSensor de fumaça %s inicializado.\n", id)
 
 	for {
 		conn, err := net.Dial("udp", "127.0.0.1:7000")
@@ -81,20 +82,20 @@ func main() {
 		counter := 0
 
 		for {
-			lumi = step(lumi)
+			smo = step(smo)
 
 			if counter >= 1000 {
 				data := Sensor{
 					ID:    id,
-					Type:  "Luminosidade",
-					Value: lumi,
+					Type:  "Fumaça",
+					Value: smo,
 				}
 
 				values, _ := json.Marshal(data)
 
 				_, err := conn.Write(values)
 				if err != nil {
-					fmt.Println("\nErro no envio do sensor de luminosidade: ", id, err)
+					fmt.Println("\nErro no envio do sensor de fumaça: ", id, err)
 					conn.Close()
 					break
 				}
@@ -121,12 +122,12 @@ func main() {
 					reader.ReadString('\n')
 					id = readId(reader)
 					clearTerminal()
-					fmt.Printf("\nSensor de luminosidade %s inicializado.\n", id)
+					fmt.Printf("\nSensor de fumaça %s inicializado.\n", id)
 					counter = 0
 					continue
 				}
 
-				fmt.Println(lumi)
+				fmt.Println(smo)
 				counter = 0
 			}
 

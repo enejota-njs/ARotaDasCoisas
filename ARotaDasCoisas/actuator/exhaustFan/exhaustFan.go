@@ -44,7 +44,7 @@ func clearTerminal() {
 func readId(reader *bufio.Reader) string {
 	for {
 		clearTerminal()
-		fmt.Print("\nDigite o ID da lâmpada: ")
+		fmt.Print("\nDigite o ID do exaustor: ")
 		idStr, _ := reader.ReadString('\n')
 		idStr = strings.TrimSpace(idStr)
 
@@ -79,7 +79,7 @@ func main() {
 
 		actuator = Actuator{
 			ID:   id,
-			Type: "Light",
+			Type: "Exaustor",
 		}
 
 		if err = json.NewEncoder(conn).Encode(actuator); err != nil {

@@ -68,9 +68,11 @@ func clearTerminal() {
 
 func isCompatible(sensorType, actuatorType string) bool {
 	compat := map[string]string{
-		"Luminosidade": "Light",
-		"Umidade":      "Irrigator",
-		"Temperatura":  "Cooler",
+		"Luminosidade": "Lâmpada",
+		"Umidade":      "Umidificador",
+		"Temperatura":  "Ar Condicionado",
+		"Fumaça":       "Sprinkler",
+		"Gás":          "Exaustor",
 	}
 
 	expectedActuator, ok := compat[sensorType]
@@ -193,21 +195,33 @@ func actuatorControl() {
 			switch sensor.Type {
 
 			case "Luminosidade":
-				if sensor.Value >= 50 {
-					_ = sendActuatorCommand(sensor.ID, "off")
-				} else {
+				if sensor.Value < 200 {
 					_ = sendActuatorCommand(sensor.ID, "on")
+				} else if sensor.Value > 300 {
+					_ = sendActuatorCommand(sensor.ID, "off")
 				}
 			case "Umidade":
-				if sensor.Value >= 70 {
-					_ = sendActuatorCommand(sensor.ID, "off")
-				} else {
+				if sensor.Value < 45 {
 					_ = sendActuatorCommand(sensor.ID, "on")
+				} else if sensor.Value > 55 {
+					_ = sendActuatorCommand(sensor.ID, "off")
 				}
 			case "Temperatura":
-				if sensor.Value >= 20 {
+				if sensor.Value > 25 {
 					_ = sendActuatorCommand(sensor.ID, "on")
-				} else {
+				} else if sensor.Value < 20 {
+					_ = sendActuatorCommand(sensor.ID, "off")
+				}
+			case "Fumaça":
+				if sensor.Value > 150 {
+					_ = sendActuatorCommand(sensor.ID, "on")
+				} else if sensor.Value < 80 {
+					_ = sendActuatorCommand(sensor.ID, "off")
+				}
+			case "Gás":
+				if sensor.Value > 300 {
+					_ = sendActuatorCommand(sensor.ID, "on")
+				} else if sensor.Value < 150 {
 					_ = sendActuatorCommand(sensor.ID, "off")
 				}
 			}
