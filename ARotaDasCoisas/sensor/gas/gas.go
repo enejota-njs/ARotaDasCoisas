@@ -72,6 +72,7 @@ func main() {
 
 	clearTerminal()
 	fmt.Printf("\nSensor de gás %s inicializado.\n", id)
+	fmt.Println("\nValor: ", gas)
 
 	for {
 		conn, err := net.Dial("udp", "127.0.0.1:7000")
@@ -123,11 +124,14 @@ func main() {
 					id = readId(reader)
 					clearTerminal()
 					fmt.Printf("\nSensor de gás %s inicializado.\n", id)
+					fmt.Println("\nValor: ", gas)
 					counter = 0
 					continue
 				}
 
-				fmt.Println(gas)
+				clearTerminal()
+				fmt.Printf("\nSensor de gás %s inicializado.\n", id)
+				fmt.Println("\nValor: ", gas)
 				counter = 0
 			}
 

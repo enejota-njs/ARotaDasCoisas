@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 )
@@ -215,7 +216,20 @@ func main() {
 
 					if option == "2" {
 						fmt.Println("\nSensores:")
-						for _, sensor := range latestSensors {
+
+						orderedSensors := make([]Sensor, 0, len(latestSensors))
+						for _, s := range latestSensors {
+							orderedSensors = append(orderedSensors, s)
+						}
+
+						sort.Slice(orderedSensors, func(i, j int) bool {
+							if orderedSensors[i].Type == orderedSensors[j].Type {
+								return orderedSensors[i].ID < orderedSensors[j].ID
+							}
+							return orderedSensors[i].Type < orderedSensors[j].Type
+						})
+
+						for _, sensor := range orderedSensors {
 							unit := ""
 
 							if sensor.Type == "Luminosidade" {
@@ -238,7 +252,20 @@ func main() {
 						}
 					} else if option == "5" {
 						fmt.Println("\nAtuadores: ")
-						for _, actuator := range latestActuators {
+
+						orderedActuators := make([]Actuator, 0, len(latestActuators))
+						for _, a := range latestActuators {
+							orderedActuators = append(orderedActuators, a)
+						}
+
+						sort.Slice(orderedActuators, func(i, j int) bool {
+							if orderedActuators[i].Type == orderedActuators[j].Type {
+								return orderedActuators[i].ID < orderedActuators[j].ID
+							}
+							return orderedActuators[i].Type < orderedActuators[j].Type
+						})
+
+						for _, actuator := range orderedActuators {
 							on := "Desligado"
 							if actuator.On {
 								on = "Ligado"

@@ -71,6 +71,7 @@ func main() {
 
 	clearTerminal()
 	fmt.Printf("\nSensor de luminosidade %s inicializado.\n", id)
+	fmt.Println("\nValor: ", lumi)
 
 	for {
 		conn, err := net.Dial("udp", "127.0.0.1:7000")
@@ -122,11 +123,14 @@ func main() {
 					id = readId(reader)
 					clearTerminal()
 					fmt.Printf("\nSensor de luminosidade %s inicializado.\n", id)
+					fmt.Println("\nValor: ", lumi)
 					counter = 0
 					continue
 				}
 
-				fmt.Println(lumi)
+				clearTerminal()
+				fmt.Printf("\nSensor de luminosidade %s inicializado.\n", id)
+				fmt.Println("\nValor: ", lumi)
 				counter = 0
 			}
 
