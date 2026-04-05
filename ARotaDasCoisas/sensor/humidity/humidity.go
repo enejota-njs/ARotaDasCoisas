@@ -75,7 +75,7 @@ func main() {
 	fmt.Println("\nValor: ", humi)
 
 	for {
-		conn, err := net.Dial("udp", "127.0.0.1:7000")
+		conn, err := net.Dial("udp", "server:7000")
 		if err != nil {
 			continue
 		}

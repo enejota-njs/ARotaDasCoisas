@@ -582,7 +582,7 @@ func handleActuator(conn net.Conn) {
 }
 
 func listenActuator() {
-	listenerActuator, err := net.Listen("tcp", "127.0.0.1:9000")
+	listenerActuator, err := net.Listen("tcp", ":9000")
 	if err != nil {
 		panic(err)
 	}
@@ -604,7 +604,7 @@ func listenActuator() {
 func listenSensor() {
 	bufferSensors := make([]byte, 1024)
 
-	conn, err := net.ListenPacket("udp", "127.0.0.1:7000")
+	conn, err := net.ListenPacket("udp", ":7000")
 	if err != nil {
 		fmt.Println("\nErro ao iniciar servidor UDP:", err)
 		return
@@ -702,7 +702,7 @@ func handleClient(conn net.Conn) {
 }
 
 func listenClient() {
-	listenerClient, err := net.Listen("tcp", "127.0.0.1:8000")
+	listenerClient, err := net.Listen("tcp", ":8000")
 	if err != nil {
 		panic(err)
 	}
@@ -754,8 +754,3 @@ func main() {
 
 	select {}
 }
-
-// No módulo do atuador, verificar como que tá a fiscalização, acho que só fiscaliza da primeira vez
-// No módulo do servidor ver se tá correto e falta enviar o sucess para o atuador
-// Não lembro se tem coisa do cliente pra fazer, acho que não
-// Dá ultima vez que testei, quando inscrevo um servidor trava tudo, além disso o ID tá printando vazio no servidor

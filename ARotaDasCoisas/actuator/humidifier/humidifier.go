@@ -70,7 +70,7 @@ func main() {
 	var err error
 
 	for {
-		conn, err = net.Dial("tcp", "127.0.0.1:9000")
+		conn, err = net.Dial("tcp", "server:9000")
 		if err != nil {
 			fmt.Println("\nErro ao conectar no servidor: ", err)
 			time.Sleep(1 * time.Second)
