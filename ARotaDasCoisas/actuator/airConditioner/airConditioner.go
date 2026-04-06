@@ -62,6 +62,12 @@ func readId(reader *bufio.Reader) string {
 }
 
 func main() {
+	if len(os.Args) < 2 {
+		os.Exit(1)
+	}
+
+	serverIP := os.Args[1]
+
 	reader := bufio.NewReader(os.Stdin)
 	id := readId(reader)
 
@@ -70,7 +76,7 @@ func main() {
 	var err error
 
 	for {
-		conn, err = net.Dial("tcp", "server:9000")
+		conn, err = net.Dial("tcp", serverIP+":9000")
 		if err != nil {
 			fmt.Println("\nErro ao conectar no servidor: ", err)
 			time.Sleep(1 * time.Second)

@@ -73,12 +73,17 @@ func pressEnter() {
 }
 
 func main() {
+	if len(os.Args) < 2 {
+		os.Exit(1)
+	}
+
 	clearTerminal()
+	serverIP := os.Args[1]
 	var conn net.Conn
 	var err error
 
 	for {
-		conn, err = net.Dial("tcp", "server:8000")
+		conn, err = net.Dial("tcp", serverIP+":8000")
 		if err != nil {
 			fmt.Println("\nServidor não inicializado")
 			time.Sleep(1 * time.Second)
