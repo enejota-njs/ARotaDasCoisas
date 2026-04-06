@@ -2,13 +2,13 @@ FROM golang:1.26-alpine AS server
 
 WORKDIR /app
 
-COPY go.mod ./
+COPY go.mod go.sum ./
 
 RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o server .
+RUN CGO_ENABLED=0 GOOS=linux go build -o server ./server
 
 FROM alpine:latest
 

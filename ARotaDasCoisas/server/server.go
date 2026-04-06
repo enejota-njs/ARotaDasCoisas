@@ -726,7 +726,7 @@ func listenClient() {
 		copySensors := maps.Clone(sensors)
 		muSensor.Unlock()
 
-		file, err := os.Create("../dataBase.json")
+		file, err := os.Create("../data.json")
 		if err != nil {
 			fmt.Println("\nErro ao criar arquivo JSON.")
 			return

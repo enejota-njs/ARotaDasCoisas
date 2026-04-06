@@ -1,0 +1,118 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: server-ards
+    ports:
+      - "7000:7000/udp"
+      - "8000:8000/tcp"
+      - "9000:9000/tcp"
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    container_name: client-ards
+    depends_on:
+      - server
+
+  gas:
+    build:
+      context: .
+      dockerfile: sensor/Dockerfile
+      args:
+        SENSOR: gas
+    container_name: sensor-gas-ards
+    depends_on:
+      - server
+
+  humidity:
+    build:
+      context: .
+      dockerfile: sensor/Dockerfile
+      args:
+        SENSOR: humidity
+    container_name: sensor-humidity-ards
+    depends_on:
+      - server
+
+  luminosity:
+    build:
+      context: .
+      dockerfile: sensor/Dockerfile
+      args:
+        SENSOR: luminosity
+    container_name: sensor-luminosity-ards
+    depends_on:
+      - server
+
+  smoke:
+    build:
+      context: .
+      dockerfile: sensor/Dockerfile
+      args:
+        SENSOR: smoke
+    container_name: sensor-smoke-ards
+    depends_on:
+      - server
+
+  temperature:
+    build:
+      context: .
+      dockerfile: sensor/Dockerfile
+      args:
+        SENSOR: temperature
+    container_name: sensor-temperature-ards
+    depends_on:
+      - server
+
+  air_conditioner:
+    build:
+      context: .
+      dockerfile: actuator/Dockerfile
+      args:
+        ACTUATOR: airConditioner
+    container_name: actuator-air_conditioner-ards
+    depends_on:
+      - server
+
+  exhaust_fan:
+    build:
+      context: .
+      dockerfile: actuator/Dockerfile
+      args:
+        ACTUATOR: exhaustFan
+    container_name: actuator-exhaust_fan-ards
+    depends_on:
+      - server
+
+  humidifier:
+    build:
+      context: .
+      dockerfile: actuator/Dockerfile
+      args:
+        ACTUATOR: humidifier
+    container_name: actuator-humidifier-ards
+    depends_on:
+      - server
+
+  light:
+    build:
+      context: .
+      dockerfile: actuator/Dockerfile
+      args:
+        ACTUATOR: light
+    container_name: actuator-light-ards
+    depends_on:
+      - server
+
+  sprinkler:
+    build:
+      context: .
+      dockerfile: actuator/Dockerfile
+      args:
+        ACTUATOR: sprinkler
+    container_name: actuator-sprinkler-ards
+    depends_on:
+      - server
