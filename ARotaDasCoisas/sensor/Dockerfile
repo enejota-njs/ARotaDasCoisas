@@ -1,4 +1,4 @@
-FROM golang:1.26-alpine AS sensor
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /app
 
@@ -6,16 +6,16 @@ COPY go.mod go.sum ./
 
 RUN go mod download
 
-COPY . .
-
 ARG SENSOR
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o sensor ./sensor/${SENSOR}
+COPY ./sensor/${SENSOR} ./sensor/${SENSOR}
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o sensor_bin ./sensor/${SENSOR}
 
 FROM alpine:latest
 
 WORKDIR /app
 
-COPY --from=sensor /app/sensor .
+COPY --from=builder /app/sensor_bin .
 
-CMD ["./sensor"]
+CMD ["./sensor_bin"]
