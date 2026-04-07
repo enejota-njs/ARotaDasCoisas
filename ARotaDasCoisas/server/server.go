@@ -44,6 +44,7 @@ type Actuator struct {
 }
 
 var (
+	sensorsHistory     = make(map[string][]int)
 	sensors            = make(map[string]Sensor)
 	actuators          = make(map[string]ActuatorConn)
 	muSensor           sync.Mutex
@@ -671,6 +672,7 @@ func listenSensor() {
 			_, _ = conn.WriteTo(b, addr)
 		}
 
+		sensorsHistory[received.ID] = append(sensorsHistory[received.ID], received.Value)
 		sensors[received.ID] = received
 
 		muActuator.Unlock()
@@ -720,13 +722,13 @@ func listenClient() {
 	}
 }
 
-/*func saveFile() {
+func saveFile() {
 	for {
 		muSensor.Lock()
 		copySensors := maps.Clone(sensors)
 		muSensor.Unlock()
 
-		file, err := os.Create("../data.json")
+		file, err := os.Create("../data/data.json")
 		if err != nil {
 			fmt.Println("\nErro ao criar arquivo JSON.")
 			return
@@ -740,7 +742,7 @@ func listenClient() {
 
 		time.Sleep(5 * time.Second)
 	}
-}*/
+}
 
 func main() {
 	clearTerminal()
