@@ -752,7 +752,7 @@ func main() {
 	go listenActuator()
 	go listenClient()
 	go actuatorControl()
-	//go saveFile()
+	go saveFile()
 
 	select {}
 }
