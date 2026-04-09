@@ -784,11 +784,12 @@ func saveFile() {
 	for {
 		// Cria uma cópia segura dos dados dos sensores
 		muSensor.Lock()
-		copySensors := maps.Clone(sensors)
+		copySensors := maps.Clone(sensorsHistory)
 		muSensor.Unlock()
 
 		// Cria ou sobrescreve o arquivo JSON de destino
-		file, err := os.Create("../data/data.json")
+		os.MkdirAll("/data", os.ModePerm)
+		file, err := os.Create("/data/data.json")
 		if err != nil {
 			fmt.Println("\nErro ao criar arquivo JSON.")
 			return
