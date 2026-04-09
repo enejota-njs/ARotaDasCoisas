@@ -125,7 +125,7 @@ docker compose run -it --rm client <IP do servidor>
 ---
 
 <details>
-  <summary><h2>✅ Conclusão</h2></summary>
+  <summary><h2> Conclusão</h2></summary>
 
 O desenvolvimento do projeto "A Rota Das Coisas" cumpriu com êxito o desafio de construir um ecossistema IoT robusto e performático sem a dependência de frameworks de mensageria de terceiros. A criação de um middleware customizado permitiu resolver o grave problema de alto acoplamento da arquitetura física, poupando a memória e o processamento dos dispositivos de hardware.
 
@@ -138,7 +138,7 @@ Por fim, a integração completa com o **Docker** validou o requisito arquitetur
 ---
 
 <details>
-  <summary><h2>🖥️ Contribuidores</h2></summary>
+  <summary><h2> Contribuidores</h2></summary>
 
 [<img src="https://github.com/enejota-njs.png" width="80" height="80">](https://github.com/enejota-njs)
 
@@ -147,7 +147,7 @@ Por fim, a integração completa com o **Docker** validou o requisito arquitetur
 ---
 
 <details>
-  <summary><h2>📚 Referências</h2></summary>
+  <summary><h2> Referências</h2></summary>
 
 **Documentação Oficial da Linguagem Go (Golang)**. Disponível em: <br>
 <a href="https://go.dev/doc/" target="_blank">https://go.dev/doc/</a>
