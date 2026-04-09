@@ -43,12 +43,31 @@ Por questões comerciais do projeto, não foi utilizado nenhum framework (como M
 ---
 
 <details>
+  <summary><h2> Cenário: Galpão Industrial Inteligente</h2></summary>
+
+Para ilustrar a aplicação prática do middleware, o sistema desenvolvido simula o ecossistema de um **galpão industrial inteligente**. Neste ambiente, o armazenamento de produtos e a segurança do local exigem monitoramento contínuo e respostas automatizadas sem travamentos na rede.
+
+O espaço é equipado com cinco frentes de atuação integradas pelo nosso servidor central:
+
+1. **Sensor de Luminosidade** monitora a luz natural. Ao escurecer, acende automaticamente a **Lâmpada** do galpão.
+2. **Sensor de Umidade** evita que o ar fique seco demais, acionando o **Umidificador** para proteger materiais sensíveis.
+3. **Sensor de Temperatura** atua em conjunto com o **Ar Condicionado** para resfriar o ambiente e evitar o superaquecimento de máquinas e mercadorias.
+4. **Sensor de Fumaça** atua como vigilante de segurança, disparando os **Sprinklers** (chuveiros de teto) de forma imediata ao detectar princípios de incêndio.
+5. **Sensor de Gás** detecta vazamentos tóxicos ou inflamáveis, ligando rapidamente o **Exaustor** para sugar o ar contaminado e ventilar o prédio.
+
+Neste cenário, o Servidor (Middleware) atua como o **cérebro do galpão**. Ele processa o alto volume de dados dos sensores e aciona os equipamentos físicos em frações de segundo, de forma totalmente autônoma. Simultaneamente, o cliente da operação pode acompanhar o status de todo o galpão e assumir o controle manual através da **Aplicação Cliente (CLI)**.
+
+</details>
+
+---
+
+<details>
   <summary><h2> Funcionalidades e Automação</h2></summary>
 
 - **Dispositivos Virtuais Simulados:** Sensores e atuadores rodam como processos em contêineres independentes, emulando perfeitamente o comportamento de um hardware real na rede.
 - **Monitoramento em Tempo Real:** O cliente possui uma CLI (Interface de Linha de Comando) interativa que permite ao usuário listar e verificar todos os dispositivos ou monitorar um em específico.
 - **Controle Automático:** O servidor monitora constantemente os valores recebidos e liga/desliga atuadores compatíveis automaticamente caso os limites sejam ultrapassados.
-- **Controle Manual Temporário (Override):** O usuário pode assumir o controle e enviar comandos diretos para um atuador. Quando isso ocorre, o servidor bloqueia a automação daquele atuador temporariamente para respeitar a decisão manual do usuário.
+- **Controle Manual Temporário:** O usuário pode assumir o controle e enviar comandos diretos para um atuador. Quando isso ocorre, o servidor bloqueia a automação daquele atuador temporariamente para respeitar a decisão manual do usuário.
 
 ### Regras de Automação Implementadas
 
@@ -99,25 +118,24 @@ docker compose build sprinkler            # Sprinkler
 
 ### 2. Executando o Ecossistema
 
-**Iniciar o servidor de integração (em background):**
+**Iniciar o Servidor:**
 ```bash
-docker compose up -d server
+docker compose up server
 ```
 
-**Iniciar os Sensores:**
+**Iniciar os Sensores (Terminal Interativo):**
 ```bash
-docker compose run --rm <nome_do_sensor> <IP do servidor>
+docker compose run --rm <nome_do_sensor> ./sensor_bin <IP do servidor>
 ```
 
-**Iniciar os Atuadores:**
+**Iniciar os Atuadores (Terminal Interativo):**
 ```bash
-docker compose run --rm <nome_do_atuador> <IP do servidor>
+docker compose run --rm <nome_do_atuador> ./actuator_bin <IP do servidor>
 ```
 
 **Iniciar a Aplicação Cliente (Terminal Interativo):**
-Como o cliente necessita de interação com o teclado (CLI), ele deve ser rodado com a flag `-it` diretamente no seu terminal:
 ```bash
-docker compose run -it --rm client <IP do servidor>
+docker compose run --rm client ./client_bin <IP do servidor>
 ```
 
 </details>
@@ -127,7 +145,7 @@ docker compose run -it --rm client <IP do servidor>
 <details>
   <summary><h2> Conclusão</h2></summary>
 
-O desenvolvimento do projeto "A Rota Das Coisas" cumpriu com êxito o desafio de construir um ecossistema IoT robusto e performático sem a dependência de frameworks de mensageria de terceiros. A criação de um middleware customizado permitiu resolver o grave problema de alto acoplamento da arquitetura física, poupando a memória e o processamento dos dispositivos de hardware.
+O desenvolvimento do projeto "A Rota Das Coisas" cumpriu o desafio de construir um ecossistema IoT robusto e performático sem a dependência de frameworks de terceiros. A criação de um middleware customizado permitiu resolver o grave problema de alto acoplamento da arquitetura física, poupando a memória e o processamento dos dispositivos de hardware.
 
 A escolha estratégica e a separação dos protocolos de rede mostraram-se fundamentais para a solução do problema: o uso de **UDP** para sensores evitou o congestionamento da rede lidando de forma eficiente com o alto volume de telemetria contínua, enquanto o **TCP** garantiu a confiabilidade total exigida pelos comandos direcionados aos atuadores.
 
