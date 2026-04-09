@@ -43,7 +43,7 @@ Por questões comerciais do projeto, não foi utilizado nenhum framework (como M
 ---
 
 <details>
-  <summary><h2> Cenário: Galpão Industrial Inteligente</h2></summary>
+  <summary><h2> Cenário</h2></summary>
 
 Para ilustrar a aplicação prática do middleware, o sistema desenvolvido simula o ecossistema de um **galpão industrial inteligente**. Neste ambiente, o armazenamento de produtos e a segurança do local exigem monitoramento contínuo e respostas automatizadas sem travamentos na rede.
 
